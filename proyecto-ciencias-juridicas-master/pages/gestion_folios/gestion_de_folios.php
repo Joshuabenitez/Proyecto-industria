@@ -227,3 +227,4 @@ $(document).ready(function() {
 
 <script type="text/javascript" src="js/gestion_folios/navbar_lateral.js" ></script>
 <script type="text/javascript" src="js/gestion_folios/folios.js" ></script>
+

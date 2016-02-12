@@ -1,9 +1,9 @@
 -- phpMyAdmin SQL Dump
--- version 4.3.11
+-- version 4.4.3
 -- http://www.phpmyadmin.net
 --
--- Servidor: 127.0.0.1
--- Tiempo de generación: 04-12-2015 a las 09:43:14
+-- Servidor: localhost
+-- Tiempo de generación: 08-10-2015 a las 08:06:41
 -- Versión del servidor: 5.6.24
 -- Versión de PHP: 5.6.8
 
@@ -755,29 +755,6 @@ END;
 COMMIT;   
 end$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `SP_ACTUALIZAR_PERMISO`(
-IN `pcnombre` VARCHAR(50), -- nuevo nombre que se le quiere poner al periodo
-IN `pcCodigo` INT, -- codigo del periodo que queremos modificar
-OUT `mensajeError` VARCHAR(500)
-)
-BEGIN 
-
-DECLARE EXIT HANDLER FOR SQLEXCEPTION
-BEGIN
-ROLLBACK;
-SET mensajeError = "No se pudo actualizar el permiso, por favor revise los datos que desea modificar";
-END;
-
-   START TRANSACTION;
-        UPDATE tipodepermiso
-        SET  tipodepermiso.tipo_permiso = pcnombre
-        where tipodepermiso.id_tipo_permiso = pcCodigo;
-
-    SET mensajeError = "El Permiso se ha actualizado satisfactoriamente."; 
-               
-COMMIT;   
-end$$
-
 CREATE DEFINER=`root`@`localhost` PROCEDURE `SP_ACTUALIZAR_PLAN_ESTUDIO`(
 IN pcnombre VARCHAR(50), -- nuevo nombre que se le quiere poner al plan de estudio
 IN pcCodigo INT, -- codigo del plan que queremos modificar
@@ -822,7 +799,7 @@ END;
 COMMIT;   
 end$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_actualizar_seguimiento`(IN `numFolio_` VARCHAR(25), IN `fechaFin_` DATE, IN `prioridad_` TINYINT, IN `seguimiento_` TINYINT, IN `notas_` TEXT, OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT, IN `us` INT)
+CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_actualizar_seguimiento`(IN `numFolio_` VARCHAR(25), IN `fechaFin_` DATE, IN `prioridad_` TINYINT, IN `seguimiento_` TINYINT, IN `notas_` TEXT, OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
 BEGIN 
  
    DECLARE id INTEGER DEFAULT 0;
@@ -849,7 +826,7 @@ BEGIN
        UPDATE alerta SET Atendido=1 WHERE NroFolioGenera = numFolio_;
 	 END IF;
 	 
-     INSERT INTO seguimiento_historico VALUES(NULL,id,seguimiento_,notas_,prioridad_,NOW(),us);
+     INSERT INTO seguimiento_historico VALUES(NULL,id,seguimiento_,notas_,prioridad_,NOW());
 
      SET mensaje = "El seguimiento ha sido actualizado satisfactoriamente."; 
      SET codMensaje = 1; 
@@ -1694,20 +1671,6 @@ SP: begin
      ROLLBACK;
    END;   
 	delete from sa_periodos where sa_periodos.codigo= pcCodigo;
-END$$
-
-CREATE DEFINER=`root`@`localhost` PROCEDURE `SP_ELIMINAR_PERMISO`(
-	in pcCodigo int, -- Codigo asociado al periodo que queremos eliminar
-	OUT `mensaje` VARCHAR(150)
-)
-SP: begin
-
-   DECLARE EXIT HANDLER FOR SQLEXCEPTION
-   BEGIN
-     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
-     ROLLBACK;
-   END;   
-	delete from tipodepermiso where tipodepermiso.id_tipo_permiso = pcCodigo;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `SP_ELIMINAR_PLANES_ESTUDIO`(
@@ -3042,34 +3005,6 @@ BEGIN
         );        
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `SP_OBTENER_ESTUDIANTE_CONDUCTA`(IN `Identidad` VARCHAR(20), OUT `pcMensajeError` VARCHAR(500))
-    NO SQL
-BEGIN
-
-    DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no con	trolados
-    
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-    
-		ROLLBACK;
-    
-        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
-        SET pcMensajeError := vcTempMensajeError;
-    
-    END;    
-    
-    SET  vcTempMensajeError := 'Error al obtener las solicitudes';
-    
-    SELECT
-		concat(persona.Primer_nombre, " ", persona.Segundo_nombre, " ", persona.Primer_apellido, " ", persona.Segundo_apellido) as NOMBRE,
-    	persona.N_identidad as DNI,
-        sa_estudiantes.no_cuenta as CUENTA,
-    	sa_estudiantes.anios_inicio_estudio as ANIO
-	FROM persona
-		INNER JOIN sa_estudiantes on persona.N_identidad = sa_estudiantes.dni
-	WHERE persona.N_identidad = Identidad;
-END$$
-
 CREATE DEFINER=`root`@`localhost` PROCEDURE `SP_OBTENER_INFORMACION_ESTUDIANTE`(
 	-- Descripción: Obtiene la informaciónd el estudiante a partir de su número de identidad
 	-- LDeras 2015-07-01
@@ -3258,38 +3193,6 @@ BEGIN
 		 INNER JOIN sa_tipos_solicitud ON(sa_tipos_solicitud.codigo = sa_solicitudes.cod_tipo_solicitud)
          INNER JOIN sa_estados_solicitud ON (sa_estados_solicitud.codigo = sa_solicitudes.cod_estado)
 		inner join persona on (persona.N_identidad = sa_solicitudes.dni_estudiante);
-END$$
-
-CREATE DEFINER=`root`@`localhost` PROCEDURE `SP_OBTENER_SOLICITUDES_REPORTES`(OUT `pcMensajeError` VARCHAR(500))
-    NO SQL
-BEGIN
-
-    DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no con	trolados
-    
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-    
-		ROLLBACK;
-    
-        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
-        SET pcMensajeError := vcTempMensajeError;
-    
-    END;    
-    
-    SET  vcTempMensajeError := 'Error al obtener las solicitudes';
-    
-	SELECT 
-		sa_solicitudes.codigo as CODIGO,
-		concat(persona.Primer_nombre, " ", persona.Primer_apellido) as NOMBRE,
-    	sa_solicitudes.dni_estudiante as DNI,
-    	sa_solicitudes.fecha_solicitud as FECHA,
-    	sa_tipos_solicitud.nombre as TIPOSOLICITUD,
-    	sa_tipos_solicitud.codigo as CODTIPOSOLICITUD 
-FROM sa_solicitudes
-	INNER JOIN persona on sa_solicitudes.dni_estudiante = 	persona.N_identidad
-    INNER JOIN sa_tipos_solicitud on sa_solicitudes.cod_tipo_solicitud = sa_tipos_solicitud.codigo
-    WHERE sa_solicitudes.cod_tipo_solicitud = 123488 or sa_solicitudes.cod_tipo_solicitud = 123489
-    or sa_solicitudes.cod_tipo_solicitud = 123490 or sa_solicitudes.cod_tipo_solicitud = 123491;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `SP_OBTENER_TIPOS_ESTUDIANTES`(
@@ -3963,64 +3866,6 @@ SP:BEGIN
 
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `SP_REGISTRAR_PERMISO`(
-    IN pcnombre VARCHAR(50), -- Almacena el nombre del periodo
-    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
-
-    -- Descripción: Registra un periodo
-
-
-)
-SP:BEGIN
- 
-	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar posibles errores no controlados de servidor
-	DECLARE vnContadorSolicitud INT DEFAULT 0; -- Variable determina si el nombre ya esta introducido
-    DECLARE vnCodigoPeriodo INT;
-    
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-    
-		ROLLBACK;
-
-    
-        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
-        SET pcMensajeError := vcTempMensajeError;
-    
-    END;    
-    
-     -- Determinar si el nombre del periodo ya está siendo usado
-    SET vcTempMensajeError := 'Error al seleccionar COUNT  el nombre del tipo de permiso';
-	SELECT
-		COUNT(tipo_permiso)
-	INTO
-		vnContadorSolicitud
-	FROM
-		tipodepermiso
-	WHERE
-		tipo_permiso = pcnombre;
-        
-        
-	-- Ya hay un permiso  con ese nombre
-	IF vnContadorSolicitud > 0 then
-    
-		SET pcMensajeError := 'Este periodo ya esta registrado, intenta otra';
-        LEAVE SP;
-    
-    END IF;
-    
-    SELECT 
-		IFNULL(MAX(id_tipo_permiso) + 1, 1)
-	INTO
-		vnCodigoPeriodo
-	FROM 
-		tipodepermiso;    
-    
-    SET vcTempMensajeError := 'Error al crear el registro';
-    INSERT INTO tipodepermiso (id_tipo_permiso,tipo_permiso)
-    VALUES (vnCodigoPeriodo, pcnombre);    
-
-END$$
-
 CREATE DEFINER=`root`@`localhost` PROCEDURE `SP_REGISTRAR_PLAN_ESTUDIO`(
     IN pcnombre VARCHAR(50), -- Almacena el nombre de el plan de estudio
     OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
@@ -4264,8 +4109,8 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `SP_REPORTE_CARGA_ACADEMICA`(IN `pcAnio` YEAR, IN `pcPeriodo` INT)
 SELECT
-		ca_cargas_academicas.codigo,ca_cargas_academicas.cod_periodo,persona.Primer_nombre, personas.Primer_apellido,
-        clases.Clase,ca_cursos.cod_seccion,ca_secciones.hora_inicio,hora_fin 
+		ca.codigo,ca.cod_periodo,p.Primer_nombre, p.Primer_apellido,
+        clases.Clase,cu.cod_seccion,ca_secciones.hora_inicio,hora_fin 
 	FROM
 		ca_cargas_academicas ca
         inner join persona p on ca.dni_empleado = p.N_identidad
@@ -4475,18 +4320,16 @@ CREATE TABLE IF NOT EXISTS `area` (
   `nombre` text NOT NULL,
   `id_tipo_area` int(11) NOT NULL,
   `observacion` text NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=23 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=21 DEFAULT CHARSET=latin1;
 
 --
 -- Volcado de datos para la tabla `area`
 --
 
 INSERT INTO `area` (`id_Area`, `nombre`, `id_tipo_area`, `observacion`) VALUES
+(20, 'Competición', 8, ''),
 (18, 'Hola', 1, ''),
-(19, 'ggg', 7, 'ggg'),
-(20, 'ggg', 8, 'asdgasdg'),
-(21, 'ggg', 0, 'asgasdg'),
-(22, 'asdf', 8, 'asdfasdf');
+(19, 'Fútbol', 8, '');
 
 -- --------------------------------------------------------
 
@@ -4558,14 +4401,14 @@ INSERT INTO `categorias_folios` (`Id_categoria`, `NombreCategoria`, `Descripcion
 CREATE TABLE IF NOT EXISTS `ca_acondicionamientos` (
   `codigo` int(11) NOT NULL,
   `nombre` varchar(50) DEFAULT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=23 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=22 DEFAULT CHARSET=latin1;
 
 --
 -- Volcado de datos para la tabla `ca_acondicionamientos`
 --
 
 INSERT INTO `ca_acondicionamientos` (`codigo`, `nombre`) VALUES
-(3, 'datashow23'),
+(3, 'datashow234'),
 (5, 'datashow con pantalla...'),
 (6, 'datashow'),
 (9, 'SOPORTE'),
@@ -4575,8 +4418,7 @@ INSERT INTO `ca_acondicionamientos` (`codigo`, `nombre`) VALUES
 (18, 'PruebaAllan2'),
 (19, 'PruebaAllan3'),
 (20, 'PruebaAllan4'),
-(21, 'PruebaAllan5'),
-(22, 'hhh');
+(21, 'PruebaAllan5');
 
 -- --------------------------------------------------------
 
@@ -4656,7 +4498,15 @@ CREATE TABLE IF NOT EXISTS `ca_cargas_academicas` (
   `dni_empleado` varchar(20) DEFAULT NULL,
   `cod_estado` int(11) DEFAULT NULL,
   `anio` year(4) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=latin1;
+
+--
+-- Volcado de datos para la tabla `ca_cargas_academicas`
+--
+
+INSERT INTO `ca_cargas_academicas` (`codigo`, `cod_periodo`, `no_empleado`, `dni_empleado`, `cod_estado`, `anio`) VALUES
+(1, 1, '85863', '0501-1994-05961', 2, 2015),
+(2, 2, '11456464', '0801-9123-12323', 4, 2015);
 
 -- --------------------------------------------------------
 
@@ -4684,7 +4534,14 @@ CREATE TABLE IF NOT EXISTS `ca_cursos` (
   `cod_aula` int(11) DEFAULT NULL,
   `no_empleado` varchar(20) DEFAULT NULL,
   `dni_empleado` varchar(20) DEFAULT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
+
+--
+-- Volcado de datos para la tabla `ca_cursos`
+--
+
+INSERT INTO `ca_cursos` (`codigo`, `cupos`, `cod_carga`, `cod_seccion`, `cod_asignatura`, `cod_aula`, `no_empleado`, `dni_empleado`) VALUES
+(1, 5, 1, 1500, 8, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -4928,7 +4785,7 @@ CREATE TABLE IF NOT EXISTS `ca_secciones` (
 --
 
 INSERT INTO `ca_secciones` (`codigo`, `hora_inicio`, `hora_fin`) VALUES
-(27, '04:03:00', '10:01:00');
+(1500, '08:22:00', '09:12:00');
 
 -- --------------------------------------------------------
 
@@ -4962,7 +4819,7 @@ INSERT INTO `ca_vinculaciones` (`codigo`, `nombre`, `cod_facultad`) VALUES
 CREATE TABLE IF NOT EXISTS `clases` (
   `ID_Clases` int(11) NOT NULL,
   `Clase` varchar(45) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=74 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=72 DEFAULT CHARSET=latin1;
 
 --
 -- Volcado de datos para la tabla `clases`
@@ -5182,7 +5039,9 @@ INSERT INTO `empleado` (`No_Empleado`, `N_identidad`, `Id_departamento`, `Fecha_
 ('7908', '0801-1969-02793', 11, '0000-00-00', NULL, '', 1),
 ('01', '0801-1978-12387', 12, '0000-00-00', NULL, '', 1),
 ('11910', '0801-1988-16746', 13, '0000-00-00', NULL, '', 1),
-('1414', '1414-1414-14141', 4, '2015-06-24', NULL, 'asd', 1);
+('1414', '1414-1414-14141', 4, '2015-06-24', NULL, 'asd', 1),
+('1515', '0301-1993-04250', 15, '2015-10-07', '2015-10-31', NULL, NULL),
+('0921', '0601-1993-01279', 10, '0000-00-00', NULL, 'Prueba', 1);
 
 -- --------------------------------------------------------
 
@@ -5194,36 +5053,36 @@ CREATE TABLE IF NOT EXISTS `empleado_has_cargo` (
   `No_Empleado` varchar(20) NOT NULL,
   `ID_cargo` int(11) NOT NULL,
   `Fecha_ingreso_cargo` date NOT NULL,
-  `Fecha_salida_cargo` date DEFAULT NULL,
-  `recibirNotificacion` int(11) NOT NULL DEFAULT '0'
+  `Fecha_salida_cargo` date DEFAULT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 --
 -- Volcado de datos para la tabla `empleado_has_cargo`
 --
 
-INSERT INTO `empleado_has_cargo` (`No_Empleado`, `ID_cargo`, `Fecha_ingreso_cargo`, `Fecha_salida_cargo`, `recibirNotificacion`) VALUES
-('11456464', 3, '2015-07-09', NULL, 0),
-('85863', 2, '2015-07-18', NULL, 0),
-('12968', 4, '2015-07-28', NULL, 0),
-('11538', 2, '2014-02-10', '2015-07-29', 0),
-('12969', 4, '2015-04-27', NULL, 0),
-('11538', 5, '2015-07-29', NULL, 0),
-('8708', 2, '2015-03-20', NULL, 0),
-('00001', 2, '2015-08-13', NULL, 0),
-('00003', 2, '2015-08-06', NULL, 0),
-('00004', 5, '2015-08-07', NULL, 0),
-('00005', 3, '2015-08-06', NULL, 0),
-('1014', 8, '0000-00-00', NULL, 0),
-('8860', 13, '2003-01-01', NULL, 0),
-('6558', 2, '0000-00-00', NULL, 0),
-('5548', 22, '0000-00-00', NULL, 0),
-('3089', 22, '0000-00-00', NULL, 0),
-('11022', 3, '0000-00-00', NULL, 0),
-('7908', 6, '0000-00-00', NULL, 0),
-('01', 22, '0000-00-00', NULL, 0),
-('11910', 2, '0000-00-00', NULL, 0),
-('1414', 2, '2015-06-24', NULL, 0);
+INSERT INTO `empleado_has_cargo` (`No_Empleado`, `ID_cargo`, `Fecha_ingreso_cargo`, `Fecha_salida_cargo`) VALUES
+('11456464', 3, '2015-07-09', NULL),
+('85863', 2, '2015-07-18', NULL),
+('12968', 4, '2015-07-28', NULL),
+('11538', 2, '2014-02-10', '2015-07-29'),
+('12969', 4, '2015-04-27', NULL),
+('11538', 5, '2015-07-29', NULL),
+('8708', 2, '2015-03-20', NULL),
+('00001', 2, '2015-08-13', NULL),
+('00003', 2, '2015-08-06', NULL),
+('00004', 5, '2015-08-07', NULL),
+('00005', 3, '2015-08-06', NULL),
+('1014', 8, '0000-00-00', NULL),
+('8860', 13, '2003-01-01', NULL),
+('6558', 2, '0000-00-00', NULL),
+('5548', 22, '0000-00-00', NULL),
+('3089', 22, '0000-00-00', NULL),
+('11022', 3, '0000-00-00', NULL),
+('7908', 6, '0000-00-00', NULL),
+('01', 22, '0000-00-00', NULL),
+('11910', 2, '0000-00-00', NULL),
+('1414', 2, '2015-06-24', NULL),
+('0921', 2, '0000-00-00', NULL);
 
 -- --------------------------------------------------------
 
@@ -5637,35 +5496,34 @@ CREATE TABLE IF NOT EXISTS `permisos` (
   `observacion` varchar(200) DEFAULT NULL,
   `revisado_por` varchar(15) DEFAULT NULL,
   `id_Edificio_Registro` int(11) NOT NULL,
-  `id_usuario` int(11) NOT NULL,
-  `id_tipo_permiso` int(11) NOT NULL
+  `id_usuario` int(11) NOT NULL
 ) ENGINE=MyISAM AUTO_INCREMENT=21 DEFAULT CHARSET=latin1;
 
 --
 -- Volcado de datos para la tabla `permisos`
 --
 
-INSERT INTO `permisos` (`id_Permisos`, `id_departamento`, `No_Empleado`, `id_motivo`, `dias_permiso`, `hora_inicio`, `hora_finalizacion`, `fecha`, `fecha_solicitud`, `estado`, `observacion`, `revisado_por`, `id_Edificio_Registro`, `id_usuario`, `id_tipo_permiso`) VALUES
-(1, 2, '123444', 1, 0, '08:00:00', '11:00:00', '0006-05-06 00:00:00', '2015-07-28', 'Espera', NULL, NULL, 18, 1, 0),
-(2, 3, '12969', 2, 5, '08:00:00', '15:30:00', '2015-08-11 00:00:00', '2015-07-29', 'Espera', NULL, NULL, 19, 4, 0),
-(3, 3, '12969', 1, 3, '09:30:00', '13:30:00', '2015-08-26 00:00:00', '2015-07-29', 'Espera', NULL, NULL, 21, 4, 0),
-(4, 3, '12969', 2, 1, '09:00:00', '13:00:00', '2015-08-26 00:00:00', '2015-07-29', 'Espera', NULL, NULL, 19, 4, 0),
-(5, 2, '123444', 1, 1, '01:00:00', '02:00:00', '0000-00-00 00:00:00', '2015-07-29', 'Espera', NULL, NULL, 21, 1, 0),
-(6, 3, '12969', 3, 4, '09:30:00', '14:00:00', '2015-08-03 00:00:00', '2015-07-30', 'Espera', NULL, NULL, 20, 4, 0),
-(7, 4, '00001', 3, 3, '02:00:00', '08:00:00', '2015-08-05 00:00:00', '2015-08-04', 'Espera', NULL, NULL, 20, 6, 0),
-(8, 4, '00001', 2, 4, '08:00:00', '03:30:00', '2015-08-06 00:00:00', '2015-08-04', 'Espera', NULL, NULL, 19, 6, 0),
-(9, 4, '00001', 4, 3, '01:00:00', '07:00:00', '0000-00-00 00:00:00', '2015-08-17', 'Espera', NULL, NULL, 21, 6, 0),
-(10, 4, '00001', 6, 1, '01:00:00', '07:00:00', '0000-00-00 00:00:00', '2015-08-17', 'Espera', NULL, NULL, 34, 6, 0),
-(11, 4, '00001', 1, 2, '13:00:00', '20:00:00', '2015-08-17 00:00:00', '2015-08-17', 'Espera', NULL, NULL, 21, 6, 0),
-(12, 4, '00001', 5, 5, '08:00:00', '10:00:00', '2015-08-17 00:00:00', '2015-08-17', 'Espera', NULL, NULL, 21, 6, 0),
-(13, 5, '00005', 1, 0, '09:00:00', '11:00:00', '2015-08-25 00:00:00', '2015-08-17', 'Espera', NULL, NULL, 19, 9, 0),
-(14, 5, '00005', 1, 1, '14:00:00', '15:00:00', '2015-08-17 00:00:00', '2015-08-17', 'Espera', NULL, NULL, 21, 9, 0),
-(15, 2, '123444', 7, 2, '01:00:00', '08:00:00', '0000-00-00 00:00:00', '2015-09-02', 'Finalizado', NULL, '00005', 40, 1, 0),
-(16, 5, '00005', 1, 0, '01:00:00', '07:00:00', '0000-00-00 00:00:00', '2015-09-02', 'Espera', NULL, NULL, 21, 9, 0),
-(17, 10, '3089', 4, 1, '08:00:00', '03:30:00', '0000-00-00 00:00:00', '2015-09-11', 'Espera', NULL, NULL, 36, 14, 0),
-(18, 11, '7908', 2, 1, '08:00:00', '03:30:00', '0000-00-00 00:00:00', '2015-09-11', 'Espera', NULL, NULL, 36, 16, 0),
-(19, 2, '8708', 2, 1, '01:00:00', '08:00:00', '0009-09-15 00:00:00', '2015-09-11', 'Espera', NULL, NULL, 36, 5, 0),
-(20, 11, '11022', 4, 5, '01:00:00', '02:00:00', '2023-09-15 00:00:00', '2015-09-25', 'Espera', NULL, NULL, 36, 15, 0);
+INSERT INTO `permisos` (`id_Permisos`, `id_departamento`, `No_Empleado`, `id_motivo`, `dias_permiso`, `hora_inicio`, `hora_finalizacion`, `fecha`, `fecha_solicitud`, `estado`, `observacion`, `revisado_por`, `id_Edificio_Registro`, `id_usuario`) VALUES
+(1, 2, '123444', 1, 0, '08:00:00', '11:00:00', '0006-05-06 00:00:00', '2015-07-28', 'Espera', NULL, NULL, 18, 1),
+(2, 3, '12969', 2, 5, '08:00:00', '15:30:00', '2015-08-11 00:00:00', '2015-07-29', 'Espera', NULL, NULL, 19, 4),
+(3, 3, '12969', 1, 3, '09:30:00', '13:30:00', '2015-08-26 00:00:00', '2015-07-29', 'Espera', NULL, NULL, 21, 4),
+(4, 3, '12969', 2, 1, '09:00:00', '13:00:00', '2015-08-26 00:00:00', '2015-07-29', 'Espera', NULL, NULL, 19, 4),
+(5, 2, '123444', 1, 1, '01:00:00', '02:00:00', '0000-00-00 00:00:00', '2015-07-29', 'Espera', NULL, NULL, 21, 1),
+(6, 3, '12969', 3, 4, '09:30:00', '14:00:00', '2015-08-03 00:00:00', '2015-07-30', 'Espera', NULL, NULL, 20, 4),
+(7, 4, '00001', 3, 3, '02:00:00', '08:00:00', '2015-08-05 00:00:00', '2015-08-04', 'Espera', NULL, NULL, 20, 6),
+(8, 4, '00001', 2, 4, '08:00:00', '03:30:00', '2015-08-06 00:00:00', '2015-08-04', 'Espera', NULL, NULL, 19, 6),
+(9, 4, '00001', 4, 3, '01:00:00', '07:00:00', '0000-00-00 00:00:00', '2015-08-17', 'Espera', NULL, NULL, 21, 6),
+(10, 4, '00001', 6, 1, '01:00:00', '07:00:00', '0000-00-00 00:00:00', '2015-08-17', 'Espera', NULL, NULL, 34, 6),
+(11, 4, '00001', 1, 2, '13:00:00', '20:00:00', '2015-08-17 00:00:00', '2015-08-17', 'Espera', NULL, NULL, 21, 6),
+(12, 4, '00001', 5, 5, '08:00:00', '10:00:00', '2015-08-17 00:00:00', '2015-08-17', 'Espera', NULL, NULL, 21, 6),
+(13, 5, '00005', 1, 0, '09:00:00', '11:00:00', '2015-08-25 00:00:00', '2015-08-17', 'Espera', NULL, NULL, 19, 9),
+(14, 5, '00005', 1, 1, '14:00:00', '15:00:00', '2015-08-17 00:00:00', '2015-08-17', 'Espera', NULL, NULL, 21, 9),
+(15, 2, '123444', 7, 2, '01:00:00', '08:00:00', '0000-00-00 00:00:00', '2015-09-02', 'Espera', NULL, NULL, 40, 1),
+(16, 5, '00005', 1, 0, '01:00:00', '07:00:00', '0000-00-00 00:00:00', '2015-09-02', 'Espera', NULL, NULL, 21, 9),
+(17, 10, '3089', 4, 1, '08:00:00', '03:30:00', '0000-00-00 00:00:00', '2015-09-11', 'Espera', NULL, NULL, 36, 14),
+(18, 11, '7908', 2, 1, '08:00:00', '03:30:00', '0000-00-00 00:00:00', '2015-09-11', 'Espera', NULL, NULL, 36, 16),
+(19, 2, '8708', 2, 1, '01:00:00', '08:00:00', '0009-09-15 00:00:00', '2015-09-11', 'Espera', NULL, NULL, 36, 5),
+(20, 11, '11022', 4, 5, '01:00:00', '02:00:00', '2023-09-15 00:00:00', '2015-09-25', 'Espera', NULL, NULL, 36, 15);
 
 -- --------------------------------------------------------
 
@@ -5711,17 +5569,17 @@ INSERT INTO `persona` (`N_identidad`, `Primer_nombre`, `Segundo_nombre`, `Primer
 ('0801-1959-03858', 'Elizabeth', '', 'Tercero', 'Dubua', '2015-07-29', 'F', 'na', 'prueba@yahoo.com', 'Soltero', 'Hondureña', ''),
 ('0000-0000-00015', 'Prueba', 'Prueba', 'Pruebas', '', '1980-08-27', 'M', '', 'prueba@yahoo.com', 'Soltero', 'hondureña', ''),
 ('0801-1972-10136', 'Ana', '', 'Moncada', 'Torres', '1972-07-07', 'F', '', 'analourdes@yahoo.com', 'soltero', 'Hondureña', ''),
-('0501-0501-05010', 'Pedro', 'Pablo', 'Pedro', 'Hernandez', '2015-05-05', 'F', 'Col. Kennedy', 'jose@gmail.com', 'Soltero', 'Hondurena', ''),
+('0501-0501-05010', 'Pedro ', 'Pablo', 'Perez', 'Hernandez', '2015-05-05', 'F', 'Col. Kennedy', 'jose@gmail.com', 'Soltero', 'Hondurena', ''),
 ('0000-0000-00178', 'pruebas', '', 'prueba', 'prueba', '1990-07-27', 'M', '', 'prueba@yahoo.com', 'soltero', 'hondureña', ''),
 ('0000-0000-00156', 'prueba', 'prueba', 'prueba', 'prueba', '1990-07-30', 'F', '', 'prueba@yahoo.com', 'Soltero', 'salvadoreña', ''),
 ('0801-1990-77777', 'Allan', 'Ricardo', 'Diaz', 'Gomez', '1990-09-09', 'M', 'col. José A. Ulloa', 'allandiazgomez@gamil.com', 'Viudo', 'Hondureña', ''),
-('0801-1990-77778', 'Jose', 'Ricardo', 'Jose', 'Gomez', '1990-09-09', 'M', 'Ulloa', 'allandiazgomez@gmail.com', 'Viudo', 'Hondureï¿½a', ''),
+('0801-1990-77778', 'Jose', 'Ricardo', 'Diaz', 'Gomez', '1990-09-09', 'M', 'Ulloa', 'allandiazgomez@gmail.com', 'Viudo', 'Hondureña', ''),
 ('0802-1991-33333', 'Ana', 'Maria', 'Wow', 'wow', '1991-09-09', 'F', 'Sunseri', 'anamen@yahoo.com', 'Casado', 'Argentina', ''),
 ('0801-1991-21784', 'Yenifer', 'Shisell', 'Morazan', 'Ferrufino', '1991-10-16', 'F', 'Res. santa maria', 'shisellmorazan@hotmail.es', 'Soltero', 'Hondureña', ''),
 ('1400-1400-14000', 'Primer', 'Segundo', 'Primer', 'Segundo', '2015-08-18', 'M', 'Direccion', 'c@gmail.com', 'Soltero', 'Nacionalidad', ''),
 ('0801-1991-21785', 'Gleny', 'Mabel', 'Velasquez', 'Girón', '1993-02-23', 'F', 'Res. la joya', 'mabel@hotmail.com', 'Casado', 'Hondureña', ''),
 ('0001-0001-00001', 'secretaria', '', 'secretaria', 'secretaria', '2015-08-12', 'F', 'n.a', 'secre@yahoo.com', 'soltero', 'hondureña', ''),
-('0002-0002-00002', 'estudiante', '', 'estudiante', 'estudiante', '2015-08-12', 'F', 'ej', 'ej@yahoo.com', 'Soltero', 'hondureï¿½a', ''),
+('0002-0002-00002', 'estudiante', '', 'estudiante', 'estudiante', '2015-08-12', 'F', 'ej', 'ej@yahoo.com', 'Soltero', 'hondureña', ''),
 ('0003-0003-00003', 'secretariadeca', '', 'secretariadeca', 'secretariadeca', '2015-08-12', 'M', 'n', 'secretariadeca@yahoo.es', 'Casado', 'hondureña', ''),
 ('0004-0004-00004', 'asistente', '', 'asistente', 'asistente', '2015-08-20', 'M', 'n', 'asistente@yahoo.com', 'Casado', 'hondureña', ''),
 ('0005-0005-00005', 'deca', '', 'deca', 'deca', '2015-08-12', 'F', 'n', 'deca@hhjk.es', 'Casado', 'hondureña', ''),
@@ -5733,10 +5591,10 @@ INSERT INTO `persona` (`N_identidad`, `Primer_nombre`, `Segundo_nombre`, `Primer
 ('0801-1990-12345', 'Yenifer', 'Shisell', 'Morazan', 'Ferrufino', '2015-08-18', 'F', 'Col. Santa Lucia', 'yenifer@gmail.com', 'Soltero', 'Hondureña', ''),
 ('0801-1990-66666', 'Alan', 'Ricardo', 'Diaz', 'Gomez', '1990-12-12', 'M', 'Col. Ulloa', 'd.allanricado@yahoo.com', 'Viudo', 'Hondureña', ''),
 ('0801-1991-77777', 'Ana', 'Linda', 'Hermosa', 'Preciosa', '1990-05-05', 'F', 'Col. Ulloa', 'analinda@yahoo.com', 'Viudo', 'Hondureña', ''),
-('0301-1993-04251', 'Carlos', 'Alberto', 'Carlos', 'Montoya', '1993-10-22', 'M', 'C', 'calbertsm@gmail.com', 'Soltero', 'Hondureno', ''),
-('0301-1990-00604', 'Juan', 'Ramón', 'Juan', 'Montoya', '1990-10-26', 'M', 'C', 'jsalgado@gmail.com', 'Soltero', 'Hondureno', ''),
+('0301-1993-04251', 'Carlos', 'Alberto', 'Salgado', 'Montoya', '1993-10-22', 'M', 'C', 'calbertsm@gmail.com', 'Soltero', 'Hondureno', ''),
+('0301-1990-00604', 'Juan', 'Ramón', 'Salgado', 'Montoya', '1990-10-26', 'M', 'C', 'jsalgado@gmail.com', 'Soltero', 'Hondureno', ''),
 ('0007-0007-00007', 'eliestudiante', 'eli', 'eliestudiante', 'eliestudiante', '0000-00-00', 'F', 'N.A.', 'prueba@yahoo.es', 'soltero', 'hondureña', ''),
-('0801-1977-13759', 'Rafael', 'Edgardo', 'Rafael', 'Oliva', '1977-11-06', 'M', 'Altos del Trapiche', 'rafael@diazdelvalle.com', 'Casado', 'Hn', ''),
+('0801-1977-13759', 'Rafael', 'Edgardo', 'Diaz del Valle', 'Oliva', '1977-11-06', 'M', 'Altos del Trapiche', 'rafael@diazdelvalle.com', 'Casado', 'Hn', ''),
 ('0202-0000-00000', 'EEF', 'FDEF', 'EFDE', 'Puerto', '0000-00-00', 'F', 'n', 'S@yahoo.es', 'soltero', 'hondureña', ''),
 ('0801-1965-00177', 'BESSY', 'MARGOT ', 'NAZAR ', 'HERRERA', '1965-01-05', 'F', '', 'bmnazarh@hotmail.com', 'soltero', 'hondureña', ''),
 ('0801-1959-03859', 'GLORIA', 'ISABEL', 'OSEGUERA', 'LOPEZ', '1959-09-21', 'F', '', 'gloriaoseguera@yahoo.com', 'soltero', 'hondureña', ''),
@@ -5746,37 +5604,10 @@ INSERT INTO `persona` (`N_identidad`, `Primer_nombre`, `Segundo_nombre`, `Primer
 ('0801-1969-02793', 'JHONNY ', 'ALEXIS ', 'MEMBREÑO', 'MEMBREÑO', '1969-06-02', 'M', '', 'jhonny.membreño@unah.edu.hn', 'Soltero', 'hondureña', ''),
 ('0801-1978-12387', 'MONICA ', 'ESMERALDA ', 'DORMES ', 'RAMIREZ', '1978-00-00', 'F', '', 'esmeraldadormes772@gmail.com', 'Soltero', 'hondureña', ''),
 ('0801-1988-16746', 'EVELIN ', 'ROCIO ', 'CANACA ', 'ARRIOLA', '1988-09-06', 'F', '', 'ecanaca@unah.edu.hn', 'Soltero', 'hondureña', ''),
-('0801-1971-10136', 'JUAN', 'JUAN', 'JUAN', 'SS', '0000-00-00', 'F', 'SS', 'SDJDJD@GMAIL.COM', 'Soltero', 'SS', ''),
-('0801-1987-09326', 'IRIS', 'ALEJANDRA', 'IRIS', 'LAGOSs', '1987-04-24', 'F', '', 'irishawi@hotmail.com', 'Divorciado', 'Espain', ''),
+('0801-1971-10136', 'JUAN', 'JUAN', 'SSS', 'SS', '0000-00-00', 'F', 'SS', 'SDJDJD@GMAIL.COM', 'Soltero', 'SS', ''),
+('0801-1987-09326', 'IRIS', 'ALEJANDRA', 'CHAVARRÍA', 'LAGOS', '1987-04-24', 'F', '', 'irishawi@hotmail.com', 'Soltero', 'hondureña', ''),
 ('1414-1414-14141', 'Prueba de error', '', 'Prueba de error', 'Prueba de error', '2015-06-24', 'M', 'Direccion', 'q@gmail.com', 'Soltero', 'Hondurena', ''),
-('0703-1991-00999', 'Juan', '', 'Velazques', 'Pineda', '2015-11-21', 'M', 'pruebaJuan', 'pruebajuan@gmail.com', 'Casado', 'Honduras', ''),
-('0703-1991-00911', 'Hector', '', 'Llanos', 'Pineda', '2015-11-12', 'F', 'asdf', 'hllanos18@yahoo.com', 'Casado', 'Honduras', ''),
-('0601-1993-01279', 'Alex', 'Dario', 'Flores', 'Aplicano', '1992-09-21', 'M', 'Hato de enmedio', 'alex_dario92@hotmail.com', 'Soltero', 'HondureÃ±o', ''),
-('0703-1991-00912', 'hectorr', '', 'llanosr', '', '2015-11-29', 'F', 'asdfasdf', 'hllanosr75@gmail.com', 'Divorciado', 'Honduras', ''),
-('0101-1991-00006', 'Hectory', 'hectory', 'llanosy', 'llanosy', '1991-01-22', 'F', '', 'hllanosr75y@gmail.com', 'Divorciado', 'Honduras', ''),
-('0703-1991-00916', 'Hectory', '', 'llanosy', '', '2015-11-24', 'F', '', 'hllanosr75y@gmail.com', 'Casado', 'Honduras', ''),
-('0703-1991-00918', 'yeto', 'yeto', 'cardona', 'llanosr', '2015-11-29', 'M', 'asdfasdf', 'yeti@gmail.com', 'Divorciado', 'Honduras', ''),
-('0703-1991-22212', 'Hectors', 'N/D', 'Llanoss', 'N/D', '1990-01-22', 'M', 'N/D', 'hllanosr76@gmail.com', 'Casado', 'Honduras', ''),
-('0703-1993-66666', 'hectorrrr', '', 'llanosssss', '', '1991-04-22', 'F', '', 'hllanosr755@gmail.com', 'Viudo', '', ''),
-('0703-1991-66666', 'hectorrrr', '', 'Llano', '', '2015-11-13', 'F', 'asdfasdf', 'hllanosr75@gmail.com', 'Casado', 'Hon', ''),
-('1234-1234-12333', 'yetorrr', 'Hectorr', 'cardonar', 'llanosy', '0000-00-00', 'F', '', 'hllanosrr75y@gmail.com', 'Divorciado', 'Honduras', ''),
-('0703-1991-00333', 'ulise', 'Hectorr', 'ulise', 'llanosy', '2015-11-11', 'F', 'gg', 'hllanosr75y@gmail.com', 'Soltero', 'Honduras', ''),
-('0101-1991-66666', 'yetuu', 'antonio', 'cardonau', 'cardnauuuuu', '2015-11-11', 'F', '', 'yeti@gmail.com', 'Viudo', 'panana', ''),
-('0703-6666-00918', 'fernando', 'Hectoryf', 'llanosyf', 'llanosyf', '2015-11-29', 'M', 'asdfasdfasdfasdf', 'fernando@gmail.com', 'Soltero', 'costa rica', ''),
-('0703-7777-00911', 'Hectoaa', 'aaaa', 'aa', 'aaaa', '2015-11-19', 'F', '', 'aaaa@gmail.com', 'Soltero', 'aaaa', ''),
-('5555-1991-00912', 'ccc', 'cc', 'cc', 'cc', '2015-11-20', 'M', 'cccc', 'ccc@gmail.com', 'Casado', 'cc', ''),
-('2222-1991-00912', 'Hectorr', 'xxxx', 'xxx', 'xxxx', '2015-11-17', 'M', '', 'xx@gmail.com', 'Casado', 'Honduras', ''),
-('0703-1991-11111', 'hhh', 'N/D', 'hhh', 'N/D', '2015-11-28', 'F', 'N/D', 'hllanosr75@gmail.com', 'Soltero', 'Honduras', ''),
-('0801-1890-12345', 'Hectorr', 'Hectorr', 'llanosy', 'llanosy', '2015-11-05', 'F', 'gg', 'hllanosr75y@gmail.com', 'Soltero', 'Honduras', ''),
-('0101-1991-00056', 'felipe', 'felipe', 'felipe', 'felipe', '2015-11-20', 'F', 'gg', 'felipe@gmail.com', 'Soltero', 'Honduras', ''),
-('0703-1991-00967', 'felipe', 'felipe', 'felipe', 'felipe', '2015-11-26', 'F', 'felipe', 'felipe@gmail.com', 'Casado', 'felipe', ''),
-('0703-1991-00934', 'Hectorrr', 'Hectorr', 'llanosy', 'llanosy', '2015-11-11', 'F', 'gg', 'hllanosr75y@gmail.com', 'Soltero', 'Honduras', ''),
-('0703-1991-80911', 'Hectorr', 'Hectorr', 'llanosy', 'llanosy', '2015-12-16', 'F', '', 'hllanosr75y@gmail.com', 'Soltero', 'Honduras', ''),
-('0703-1991-00965', 'fer', 'fer', 'fer', 'er', '2015-12-17', 'F', 'rr', 'hllanosr75@gmail.com', 'Casado', 'Honduras', ''),
-('0703-1991-00666', 'juan', 'juan', 'juan', 'juan', '2015-12-28', 'F', 'asdf', 'hllanosr75y@gmail.com', 'Divorciado', 'Honduras', ''),
-('0703-1999-00911', 'hectorr', 'hectorr', 'llanosr', 'llanosr', '2015-12-16', 'F', 'asdfasdf', 'hllanosr75@gmail.com', 'Divorciado', 'Honduras', ''),
-('0703-1998-00911', 'juan', 'juan', 'juan', 'juan', '2015-12-18', 'F', 'asdfasdf', 'juan@gmail.com', 'Divorciado', 'Honduras', ''),
-('0703-1991-06912', 'hllanos', 'hllanos', 'hllanos', 'hllanos', '2015-12-23', 'F', 'asdfasdf', 'asdf@gmail.com', 'Soltero', 'Honduras', '');
+('0601-1993-01279', 'Alex', 'Dario', 'Flores', 'Aplicano', '0000-00-00', 'M', 'Col. Hato de Enmedio', 'floresalex@unah.hn', 'Soltero', 'HondureÃ±o', '');
 
 -- --------------------------------------------------------
 
@@ -5945,7 +5776,7 @@ INSERT INTO `sa_estados_solicitud` (`codigo`, `descripcion`) VALUES
 CREATE TABLE IF NOT EXISTS `sa_estudiantes` (
   `dni` varchar(20) NOT NULL,
   `no_cuenta` varchar(11) NOT NULL,
-  `anios_inicio_estudio` varchar(11) NOT NULL,
+  `anios_inicio_estudio` int(11) NOT NULL,
   `indice_academico` decimal(10,0) NOT NULL,
   `fecha_registro` date NOT NULL,
   `uv_acumulados` int(11) NOT NULL,
@@ -5954,36 +5785,29 @@ CREATE TABLE IF NOT EXISTS `sa_estudiantes` (
   `cod_ciudad_origen` int(11) NOT NULL,
   `cod_orientacion` int(11) NOT NULL,
   `cod_residencia_actual` int(11) NOT NULL,
-  `anios_final_estudio` varchar(11) NOT NULL,
-  `grupo_etnico` varchar(50) DEFAULT NULL,
-  `carrera_anterior` varchar(100) DEFAULT NULL,
-  `aniosDerecho1` varchar(10) DEFAULT NULL,
-  `aniosDerecho2` varchar(10) DEFAULT NULL
+  `anios_final_estudio` int(11) NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 --
 -- Volcado de datos para la tabla `sa_estudiantes`
 --
 
-INSERT INTO `sa_estudiantes` (`dni`, `no_cuenta`, `anios_inicio_estudio`, `indice_academico`, `fecha_registro`, `uv_acumulados`, `cantcodad_solicitudes`, `cod_plan_estudio`, `cod_ciudad_origen`, `cod_orientacion`, `cod_residencia_actual`, `anios_final_estudio`, `grupo_etnico`, `carrera_anterior`, `aniosDerecho1`, `aniosDerecho2`) VALUES
-('0703-7777-00911', '20172500231', '1996', '77', '2015-11-28', 77, NULL, 1, 11, 2, 11, '1996', 'garifuna', 'civil', '1996', '1996'),
-('0501-0501-05010', '20112011201', '1', '88', '2015-07-29', 52, NULL, 1, 1, 2, 1, '0', NULL, 'Industrial', NULL, NULL),
-('0801-1990-77778', '20091000028', '5', '61', '2015-07-31', 70, NULL, 8, 2, 8, 2, '0', NULL, NULL, NULL, NULL),
-('0801-1971-10136', '20120001201', '1990', '98', '2015-09-11', 1, NULL, 1, 2, 2, 2, '2015', NULL, NULL, NULL, NULL),
-('0801-1991-21784', '20101003771', '1', '75', '2015-08-01', 56, NULL, 9, 2, 8, 2, '0', NULL, NULL, NULL, NULL),
-('0801-1991-21785', '20101003661', '1', '80', '2015-08-04', 1, NULL, 9, 1, 2, 1, '0', NULL, NULL, NULL, NULL),
-('0002-0002-00002', '20101002705', '5', '100', '2015-08-04', 52, NULL, 9, 2, 4, 2, '0', NULL, NULL, NULL, NULL),
-('8888-8888-88888', '20882008640', '1', '87', '2015-08-04', 1, NULL, 9, 1, 2, 1, '0', NULL, NULL, NULL, NULL),
-('0801-1991-21786', '20101003772', '5', '80', '2015-08-05', 56, NULL, 15, 1, 2, 1, '0', NULL, NULL, NULL, NULL),
-('0801-1990-12345', '20091000370', '5', '2', '2015-08-05', 20, NULL, 15, 9, 4, 21, '0', NULL, NULL, NULL, NULL),
-('0801-1991-77777', '20081000028', '8', '61', '2015-08-12', 6, NULL, 8, 9, 2, 9, '0', NULL, NULL, NULL, NULL),
-('0301-1993-04251', '20121001759', '2012', '87', '2015-08-12', 50, NULL, 15, 2, 3, 2, '2015', NULL, NULL, NULL, NULL),
-('0301-1990-00604', '20091900402', '2009', '83', '2015-08-12', 67, NULL, 15, 2, 4, 2, '2014', NULL, NULL, NULL, NULL),
-('0007-0007-00007', '20101002707', '1990', '98', '2015-08-17', 54, NULL, 1, 4, 8, 4, '2015', NULL, NULL, NULL, NULL),
-('0801-1977-13759', '20101003881', '1996', '89', '2015-08-19', 254, NULL, 16, 2, 8, 2, '2003', NULL, NULL, NULL, NULL),
-('0703-1999-00911', '20102500666', '0', '0', '2015-12-02', 1, NULL, 1, 4, 2, 1, '0', ' ', '', NULL, NULL),
-('1234-1234-12333', '20102500000', '1990', '0', '2015-11-27', 1, NULL, 1, 2, 2, 2, '2015', NULL, NULL, NULL, NULL),
-('0703-1991-06912', '20102560236', '1991', '0', '2015-12-02', 1, NULL, 1, 4, 2, 13, '1992', ' ', '', '1993', '1994');
+INSERT INTO `sa_estudiantes` (`dni`, `no_cuenta`, `anios_inicio_estudio`, `indice_academico`, `fecha_registro`, `uv_acumulados`, `cantcodad_solicitudes`, `cod_plan_estudio`, `cod_ciudad_origen`, `cod_orientacion`, `cod_residencia_actual`, `anios_final_estudio`) VALUES
+('0801-1987-09326', '20051008272', 2005, '71', '2015-09-19', 265, NULL, 16, 2, 2, 2, 2015),
+('0501-0501-05010', '20112011201', 1, '88', '2015-07-29', 52, NULL, 1, 1, 2, 1, 0),
+('0801-1990-77778', '20091000028', 5, '61', '2015-07-31', 70, NULL, 8, 2, 8, 2, 0),
+('0801-1971-10136', '20120001201', 1990, '98', '2015-09-11', 1, NULL, 1, 2, 2, 2, 2015),
+('0801-1991-21784', '20101003771', 1, '75', '2015-08-01', 56, NULL, 9, 2, 8, 2, 0),
+('0801-1991-21785', '20101003661', 1, '80', '2015-08-04', 1, NULL, 9, 1, 2, 1, 0),
+('0002-0002-00002', '20101002705', 5, '100', '2015-08-04', 52, NULL, 9, 2, 4, 2, 0),
+('8888-8888-88888', '20882008640', 1, '87', '2015-08-04', 1, NULL, 9, 1, 2, 1, 0),
+('0801-1991-21786', '20101003772', 5, '80', '2015-08-05', 56, NULL, 15, 1, 2, 1, 0),
+('0801-1990-12345', '20091000370', 5, '2', '2015-08-05', 20, NULL, 15, 9, 4, 21, 0),
+('0801-1991-77777', '20081000028', 8, '61', '2015-08-12', 6, NULL, 8, 9, 2, 9, 0),
+('0301-1993-04251', '20121001759', 2012, '87', '2015-08-12', 50, NULL, 15, 2, 3, 2, 2015),
+('0301-1990-00604', '20091900402', 2009, '83', '2015-08-12', 67, NULL, 15, 2, 4, 2, 2014),
+('0007-0007-00007', '20101002707', 1990, '98', '2015-08-17', 54, NULL, 1, 4, 8, 4, 2015),
+('0801-1977-13759', '20101003881', 1996, '89', '2015-08-19', 254, NULL, 16, 2, 8, 2, 2003);
 
 -- --------------------------------------------------------
 
@@ -6003,23 +5827,9 @@ CREATE TABLE IF NOT EXISTS `sa_estudiantes_correos` (
 INSERT INTO `sa_estudiantes_correos` (`dni_estudiante`, `correo`) VALUES
 ('0002-0002-00002', 'ej@yahoo.com'),
 ('0007-0007-00007', 'prueba@yahoo.es'),
-('0101-1991-00056', 'felipe@gmail.com'),
-('0101-1991-66666', 'yeti@gmail.com'),
 ('0301-1990-00604', 'jsalgado@gmail.com'),
 ('0301-1993-04251', 'calbertsm@gmail.com'),
 ('0501-0501-05010', 'jose@gmail.com'),
-('0703-1991-00333', 'hllanosr75y@gmail.com'),
-('0703-1991-00934', 'hllanosr75y@gmail.com'),
-('0703-1991-00967', 'felipe@gmail.com'),
-('0703-1991-06912', 'asdf@gmail.com'),
-('0703-1991-11111', 'hllanosr75@gmail.com'),
-('0703-1991-22212', 'hllanosr76@gmail.com'),
-('0703-1991-80911', 'hllanosr75y@gmail.com'),
-('0703-1998-00911', 'juan@gmail.com'),
-('0703-1999-00911', 'hllanosr75@gmail.com'),
-('0703-6666-00918', 'fernando@gmail.com'),
-('0703-7777-00911', 'aaaa@gmail.com'),
-('0801-1890-12345', 'hllanosr75y@gmail.com'),
 ('0801-1959-03859', 'prueba@yahoo.com'),
 ('0801-1971-10136', 'SDJDJD@GMAIL.COM'),
 ('0801-1977-13759', 'rafael@diazdelvalle.com'),
@@ -6031,9 +5841,6 @@ INSERT INTO `sa_estudiantes_correos` (`dni_estudiante`, `correo`) VALUES
 ('0801-1991-21786', 'kenvil@gmail.com'),
 ('0801-1991-77777', 'analinda@yahoo.com'),
 ('0802-1991-33333', 'anamen@yahoo.com'),
-('1234-1234-12333', 'hllanosrr75y@gmail.com'),
-('2222-1991-00912', 'xx@gmail.com'),
-('5555-1991-00912', 'ccc@gmail.com'),
 ('8888-8888-88888', 'correo@gmail.com');
 
 -- --------------------------------------------------------
@@ -6052,39 +5859,22 @@ CREATE TABLE IF NOT EXISTS `sa_estudiantes_menciones_honorificas` (
 --
 
 INSERT INTO `sa_estudiantes_menciones_honorificas` (`dni_estudiante`, `cod_mencion`) VALUES
-('0002-0002-00002', 0),
+('0002-0002-00002', 4),
 ('0007-0007-00007', 2),
-('0101-1991-00056', 2),
-('0101-1991-66666', 12),
 ('0301-1990-00604', 2),
 ('0301-1993-04251', 2),
-('0501-0501-05010', 0),
-('0703-1991-00333', 2),
-('0703-1991-00934', 2),
-('0703-1991-00967', 2),
-('0703-1991-06912', 2),
-('0703-1991-11111', 2),
-('0703-1991-22212', 12),
-('0703-1991-80911', 2),
-('0703-1998-00911', 2),
-('0703-1999-00911', 2),
-('0703-6666-00918', 13),
-('0703-7777-00911', 2),
-('0801-1890-12345', 2),
+('0501-0501-05010', 1),
 ('0801-1959-03859', 0),
 ('0801-1971-10136', 2),
-('0801-1977-13759', 0),
-('0801-1987-09326', 2),
+('0801-1977-13759', 7),
+('0801-1987-09326', 6),
 ('0801-1990-12345', 2),
-('0801-1990-77778', 0),
+('0801-1990-77778', 3),
 ('0801-1991-21784', 2),
 ('0801-1991-21785', 1),
 ('0801-1991-21786', 1),
 ('0801-1991-77777', 3),
 ('0802-1991-33333', 1),
-('1234-1234-12333', 0),
-('2222-1991-00912', 2),
-('5555-1991-00912', 2),
 ('8888-8888-88888', 1);
 
 -- --------------------------------------------------------
@@ -6105,14 +5895,14 @@ CREATE TABLE IF NOT EXISTS `sa_estudiantes_tipos_estudiantes` (
 
 INSERT INTO `sa_estudiantes_tipos_estudiantes` (`codigo_tipo_estudiante`, `dni_estudiante`, `fecha_registro`) VALUES
 (2, '0801-1959-03859', '2015-07-28 16:46:24'),
-(8, '0501-0501-05010', '2015-07-29 00:41:48'),
-(9, '0801-1990-77778', '2015-07-31 17:43:12'),
+(1, '0501-0501-05010', '2015-07-29 00:41:48'),
+(1, '0801-1990-77778', '2015-07-31 17:43:12'),
 (1, '0802-1991-33333', '2015-07-31 17:46:52'),
 (2, '0802-1991-33333', '2015-07-31 17:47:50'),
 (1, '0801-1991-21784', '2015-08-01 22:41:26'),
 (2, '0801-1991-21784', '2015-08-02 02:02:14'),
 (1, '0801-1991-21785', '2015-08-04 02:31:10'),
-(8, '0002-0002-00002', '2015-08-04 12:48:31'),
+(1, '0002-0002-00002', '2015-08-04 12:48:31'),
 (1, '8888-8888-88888', '2015-08-04 23:51:45'),
 (2, '8888-8888-88888', '2015-08-04 23:58:53'),
 (2, '0801-1991-21786', '2015-08-05 02:03:17'),
@@ -6122,31 +5912,14 @@ INSERT INTO `sa_estudiantes_tipos_estudiantes` (`codigo_tipo_estudiante`, `dni_e
 (4, '0801-1991-77777', '2015-08-12 01:55:15'),
 (7, '0801-1991-77777', '2015-08-12 02:10:06'),
 (1, '0801-1991-77777', '2015-08-12 02:10:18'),
-(9, '0301-1993-04251', '2015-08-12 23:36:26'),
-(9, '0301-1990-00604', '2015-08-12 23:37:59'),
+(2, '0301-1993-04251', '2015-08-12 23:36:26'),
+(2, '0301-1990-00604', '2015-08-12 23:37:59'),
 (2, '0007-0007-00007', '2015-08-17 13:56:13'),
 (7, '0007-0007-00007', '2015-08-17 13:57:12'),
 (4, '0007-0007-00007', '2015-08-17 13:57:25'),
-(9, '0801-1977-13759', '2015-08-19 09:54:47'),
-(9, '0801-1971-10136', '2015-09-11 18:00:51'),
-(2, '0801-1987-09326', '2015-09-19 13:13:45'),
-(6, '0703-1991-22212', '2015-11-27 20:01:46'),
-(8, '1234-1234-12333', '2015-11-27 23:19:56'),
-(6, '0703-1991-00333', '2015-11-27 23:36:08'),
-(9, '0101-1991-66666', '2015-11-28 13:07:13'),
-(7, '0703-6666-00918', '2015-11-28 22:25:01'),
-(9, '0703-7777-00911', '2015-11-28 22:30:18'),
-(1, '5555-1991-00912', '2015-11-28 22:32:59'),
-(7, '2222-1991-00912', '2015-11-28 22:34:21'),
-(1, '0703-1991-11111', '2015-11-29 01:09:11'),
-(6, '0801-1890-12345', '2015-11-29 11:52:58'),
-(6, '0101-1991-00056', '2015-11-29 11:54:41'),
-(6, '0703-1991-00967', '2015-11-29 11:56:35'),
-(6, '0703-1991-00934', '2015-11-29 12:09:53'),
-(1, '0703-1991-80911', '2015-12-01 10:53:26'),
-(1, '0703-1999-00911', '2015-12-02 16:41:28'),
-(1, '0703-1998-00911', '2015-12-02 16:53:33'),
-(1, '0703-1991-06912', '2015-12-02 23:02:52');
+(2, '0801-1977-13759', '2015-08-19 09:54:47'),
+(6, '0801-1971-10136', '2015-09-11 18:00:51'),
+(6, '0801-1987-09326', '2015-09-19 13:13:45');
 
 -- --------------------------------------------------------
 
@@ -6182,23 +5955,8 @@ INSERT INTO `sa_examenes_himno` (`cod_solicitud`, `fecha_solicitud`, `nota_himno
 (34, '2015-08-12', NULL, '2015-10-10'),
 (35, '2015-08-19', NULL, '0000-00-00'),
 (36, '2015-08-19', NULL, '0000-00-00'),
-(37, '2015-08-19', '0', '2015-08-19'),
-(38, '2015-09-16', '20150916', '0000-00-00'),
-(39, '2015-10-30', '0', '0000-00-00'),
-(40, '2015-10-30', '99', '2015-10-31'),
-(41, '2015-10-30', '20151030', '2015-10-25'),
-(42, '2015-10-30', '20151030', '0000-00-00'),
-(43, '2015-10-30', '20151030', '0000-00-00'),
-(44, '2015-10-31', '45', '0000-00-00'),
-(45, '2015-11-04', '20151104', '2015-11-22'),
-(46, '2015-11-11', '5', '0000-00-00'),
-(47, '2015-11-11', '20151111', '0000-00-00'),
-(48, '2015-11-11', '20151111', '0000-00-00'),
-(49, '2015-11-29', '0', '2015-11-30'),
-(50, '2015-12-01', '20151201', '0000-00-00'),
-(51, '2015-12-02', '20151202', '0000-00-00'),
-(52, '2015-12-02', '20151202', '0000-00-00'),
-(53, '2015-12-02', '20151202', '0000-00-00');
+(37, '2015-08-19', '20150819', '2015-08-19'),
+(38, '2015-09-16', '20150916', '0000-00-00');
 
 -- --------------------------------------------------------
 
@@ -6265,9 +6023,7 @@ INSERT INTO `sa_periodos` (`codigo`, `nombre`) VALUES
 (5, 'PruebaAllan'),
 (6, 'Segundo Periodo'),
 (3, 'Primer periodo'),
-(4, 'Tercer Periodo'),
-(7, NULL),
-(8, NULL);
+(4, 'Tercer Periodo');
 
 -- --------------------------------------------------------
 
@@ -6279,7 +6035,7 @@ CREATE TABLE IF NOT EXISTS `sa_planes_estudio` (
   `codigo` int(11) NOT NULL,
   `nombre` varchar(50) DEFAULT NULL,
   `uv` int(11) DEFAULT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=26 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=24 DEFAULT CHARSET=latin1;
 
 --
 -- Volcado de datos para la tabla `sa_planes_estudio`
@@ -6310,7 +6066,7 @@ CREATE TABLE IF NOT EXISTS `sa_solicitudes` (
   `cod_tipo_solicitud` int(11) NOT NULL,
   `cod_solicitud_padre` int(11) DEFAULT NULL,
   `fecha_solicitud_padre` date DEFAULT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=54 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=39 DEFAULT CHARSET=latin1;
 
 --
 -- Volcado de datos para la tabla `sa_solicitudes`
@@ -6325,23 +6081,8 @@ INSERT INTO `sa_solicitudes` (`codigo`, `fecha_solicitud`, `observaciones`, `dni
 (34, '2015-08-12', NULL, '0002-0002-00002', 2, 1, 1, 26, NULL),
 (35, '2015-08-19', NULL, '0002-0002-00002', 2, 1, 1, 33, NULL),
 (36, '2015-08-19', NULL, '0002-0002-00002', 2, 1, 1, 26, NULL),
-(37, '2015-08-19', NULL, '0801-1977-13759', 4, 2, 123482, NULL, NULL),
-(38, '2015-09-16', NULL, '0801-1959-03859', 4, 1, 123481, NULL, NULL),
-(39, '2015-10-30', NULL, '0801-1987-09326', 3, 2, 123484, NULL, NULL),
-(40, '2015-10-30', NULL, '0801-1991-21784', 3, 2, 123483, NULL, NULL),
-(41, '2015-10-30', NULL, '0801-1991-21784', 6, 1, 123485, NULL, NULL),
-(42, '2015-10-30', NULL, '0801-1990-12345', 3, 1, 1, NULL, NULL),
-(43, '2015-10-30', NULL, '0301-1993-04251', 3, 1, 123488, NULL, NULL),
-(44, '2015-10-31', NULL, '0301-1990-00604', 3, 2, 123491, NULL, NULL),
-(45, '2015-11-04', NULL, '0801-1977-13759', 4, 1, 123488, NULL, NULL),
-(46, '2015-11-11', NULL, '0801-1987-09326', 6, 2, 123491, NULL, NULL),
-(47, '2015-11-11', NULL, '0801-1990-77778', 3, 1, 123491, NULL, NULL),
-(48, '2015-11-11', NULL, '0801-1971-10136', 4, 1, 123491, NULL, NULL),
-(49, '2015-11-29', NULL, '0801-1977-13759', 4, 2, 123482, 37, NULL),
-(50, '2015-12-01', NULL, '0703-1991-80911', 5, 1, 123486, NULL, NULL),
-(51, '2015-12-02', NULL, '0703-7777-00911', 6, 1, 123490, NULL, NULL),
-(52, '2015-12-02', NULL, '0703-7777-00911', 6, 1, 123491, NULL, NULL),
-(53, '2015-12-02', NULL, '0703-7777-00911', 3, 1, 123489, NULL, NULL);
+(37, '2015-08-19', NULL, '0801-1977-13759', 4, 1, 123482, NULL, NULL),
+(38, '2015-09-16', NULL, '0801-1959-03859', 4, 1, 123481, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -6376,7 +6117,7 @@ INSERT INTO `sa_tipos_estudiante` (`codigo`, `descripcion`) VALUES
 CREATE TABLE IF NOT EXISTS `sa_tipos_solicitud` (
   `codigo` int(11) NOT NULL,
   `nombre` varchar(50) DEFAULT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=123492 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=123487 DEFAULT CHARSET=latin1;
 
 --
 -- Volcado de datos para la tabla `sa_tipos_solicitud`
@@ -6399,12 +6140,7 @@ INSERT INTO `sa_tipos_solicitud` (`codigo`, `nombre`) VALUES
 (123479, 'PruebaAllan'),
 (123482, 'GRE'),
 (123484, 'EXPEDIENTE DE GRADUACIÓN'),
-(123486, 'Solicitud Constancia de Egresado'),
-(123487, 'hhh'),
-(123488, 'Constancia de Conducta'),
-(123489, 'Constancia de Egresado'),
-(123490, 'Constancia de Himno'),
-(123491, 'Certificación para PPS');
+(123486, 'Solicitud Constancia de Egresado');
 
 -- --------------------------------------------------------
 
@@ -6431,12 +6167,7 @@ INSERT INTO `sa_tipos_solicitud_tipos_alumnos` (`cod_tipo_solicitud`, `cod_tipo_
 (123483, 1),
 (123484, 6),
 (123485, 1),
-(123486, 1),
-(123487, 8),
-(123488, 9),
-(123489, 9),
-(123490, 9),
-(123491, 9);
+(123486, 1);
 
 -- --------------------------------------------------------
 
@@ -6460,12 +6191,12 @@ CREATE TABLE IF NOT EXISTS `seguimiento` (
 --
 
 INSERT INTO `seguimiento` (`Id_Seguimiento`, `NroFolio`, `UsuarioAsignado`, `Notas`, `Prioridad`, `FechaInicio`, `FechaFinal`, `EstadoSeguimiento`) VALUES
-(2, '123123', 4, 'denegado prueba', 5, '2015-12-01 06:23:20', NULL, 10),
+(2, '123123', 4, 'd', 5, '2015-08-23 20:41:23', NULL, 8),
 (3, '123', 3, 'ninguna', 6, '2015-09-02 18:33:03', NULL, 11),
-(4, 'folio de prueba', NULL, 'huelga', 5, '2015-12-01 06:25:58', NULL, 8),
+(4, 'folio de prueba', NULL, 'prueba', 5, '2015-09-10 18:54:45', NULL, 9),
 (5, '20', 5, 'PRUEBA', 5, '2015-09-11 23:38:35', NULL, 11),
 (6, 'Oficio 120', 9, 'faltan documentos de soporte', 5, '2015-09-22 23:02:50', NULL, 11),
-(7, '002', 6, 'kkk', 6, '2015-12-01 06:55:08', NULL, 8);
+(7, '002', 6, 'en proceso de aprobación', 6, '2015-09-25 19:01:07', NULL, 11);
 
 -- --------------------------------------------------------
 
@@ -6479,29 +6210,21 @@ CREATE TABLE IF NOT EXISTS `seguimiento_historico` (
   `Id_Estado_Seguimiento` tinyint(4) NOT NULL,
   `Notas` text NOT NULL,
   `Prioridad` tinyint(4) NOT NULL,
-  `FechaCambio` datetime NOT NULL,
-  `idusuario` int(8) DEFAULT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=16 DEFAULT CHARSET=latin1;
+  `FechaCambio` datetime NOT NULL
+) ENGINE=MyISAM AUTO_INCREMENT=9 DEFAULT CHARSET=latin1;
 
 --
 -- Volcado de datos para la tabla `seguimiento_historico`
 --
 
-INSERT INTO `seguimiento_historico` (`Id_SeguimientoHistorico`, `Id_Seguimiento`, `Id_Estado_Seguimiento`, `Notas`, `Prioridad`, `FechaCambio`, `idusuario`) VALUES
-(2, 2, 8, 'Nota', 5, '2015-08-23 14:40:32', NULL),
-(3, 2, 8, 'd', 5, '2015-08-23 14:41:23', NULL),
-(4, 3, 11, 'ninguna', 6, '2015-09-02 12:33:03', NULL),
-(5, 4, 9, 'prueba', 5, '2015-09-10 12:54:45', NULL),
-(6, 5, 11, 'PRUEBA', 5, '2015-09-11 17:38:35', NULL),
-(7, 6, 11, 'faltan documentos de soporte', 5, '2015-09-22 17:02:50', NULL),
-(8, 7, 11, 'en proceso de aprobación', 6, '2015-09-25 13:01:07', NULL),
-(9, 7, 11, 'prueba', 6, '2015-11-18 10:25:49', NULL),
-(10, 7, 8, 'que ondas', 6, '2015-11-29 20:30:15', NULL),
-(11, 2, 10, 'denegado prueba', 5, '2015-12-01 00:23:20', 1),
-(12, 7, 9, 'kjhg', 6, '2015-12-01 00:24:25', 1),
-(13, 4, 11, 'en proceso', 5, '2015-12-01 00:25:19', 1),
-(14, 4, 8, 'huelga', 5, '2015-12-01 00:25:58', 1),
-(15, 7, 8, 'kkk', 6, '2015-12-01 00:55:08', 1);
+INSERT INTO `seguimiento_historico` (`Id_SeguimientoHistorico`, `Id_Seguimiento`, `Id_Estado_Seguimiento`, `Notas`, `Prioridad`, `FechaCambio`) VALUES
+(2, 2, 8, 'Nota', 5, '2015-08-23 14:40:32'),
+(3, 2, 8, 'd', 5, '2015-08-23 14:41:23'),
+(4, 3, 11, 'ninguna', 6, '2015-09-02 12:33:03'),
+(5, 4, 9, 'prueba', 5, '2015-09-10 12:54:45'),
+(6, 5, 11, 'PRUEBA', 5, '2015-09-11 17:38:35'),
+(7, 6, 11, 'faltan documentos de soporte', 5, '2015-09-22 17:02:50'),
+(8, 7, 11, 'en proceso de aprobación', 6, '2015-09-25 13:01:07');
 
 -- --------------------------------------------------------
 
@@ -6552,7 +6275,7 @@ CREATE TABLE IF NOT EXISTS `telefono` (
   `Tipo` varchar(45) DEFAULT NULL,
   `Numero` varchar(20) NOT NULL,
   `N_identidad` varchar(20) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=44 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=27 DEFAULT CHARSET=latin1;
 
 --
 -- Volcado de datos para la tabla `telefono`
@@ -6580,44 +6303,7 @@ INSERT INTO `telefono` (`ID_Telefono`, `Tipo`, `Numero`, `N_identidad`) VALUES
 (23, NULL, '9999-9999', '0007-0007-00007'),
 (24, NULL, '9710-9201', '0801-1977-13759'),
 (25, NULL, '3280-1140', '0801-1971-10136'),
-(26, NULL, '9916-2002', '0801-1987-09326'),
-(27, NULL, 'N/D', '0703-1991-22212'),
-(28, NULL, '9808-6002', '1234-1234-12333'),
-(29, NULL, '9808-6331', '0703-1991-00333'),
-(30, NULL, '2345-2343', '0101-1991-66666'),
-(31, NULL, '9808-8888', '0703-6666-00918'),
-(32, NULL, '2323-6767', '0703-7777-00911'),
-(33, NULL, '9808-6001', '5555-1991-00912'),
-(34, NULL, '9808-6001', '2222-1991-00912'),
-(35, NULL, '2323-6767', '0703-1991-11111'),
-(36, NULL, '9808-6001', '0801-1890-12345'),
-(37, NULL, '9808-6001', '0101-1991-00056'),
-(38, NULL, '2323-6767', '0703-1991-00967'),
-(39, NULL, '9808-6001', '0703-1991-00934'),
-(40, NULL, '9808-6001', '0703-1991-80911'),
-(41, NULL, '9808-6001', '0703-1999-00911'),
-(42, NULL, '2323-6767', '0703-1998-00911'),
-(43, NULL, '2345-2345', '0703-1991-06912');
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `tipodepermiso`
---
-
-CREATE TABLE IF NOT EXISTS `tipodepermiso` (
-  `id_tipo_permiso` int(11) NOT NULL,
-  `tipo_permiso` varchar(90) NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
-
---
--- Volcado de datos para la tabla `tipodepermiso`
---
-
-INSERT INTO `tipodepermiso` (`id_tipo_permiso`, `tipo_permiso`) VALUES
-(2, 'Vacaciones'),
-(3, 'Tiempo compensatorio'),
-(4, 'Corriente');
+(26, NULL, '9916-2002', '0801-1987-09326');
 
 -- --------------------------------------------------------
 
@@ -6629,17 +6315,15 @@ CREATE TABLE IF NOT EXISTS `tipo_area` (
   `id_Tipo_Area` int(11) NOT NULL,
   `nombre` varchar(30) NOT NULL,
   `observaciones` text NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=11 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=10 DEFAULT CHARSET=latin1;
 
 --
 -- Volcado de datos para la tabla `tipo_area`
 --
 
 INSERT INTO `tipo_area` (`id_Tipo_Area`, `nombre`, `observaciones`) VALUES
-(7, 'area56', 'asdfasdf'),
-(8, 'area56', 'segwert'),
-(9, 'area56', 'asdf'),
-(10, 'area56', '');
+(9, 'ExpediciÃ³n', ''),
+(8, 'Deportes', '');
 
 -- --------------------------------------------------------
 
@@ -6813,14 +6497,14 @@ CREATE TABLE IF NOT EXISTS `usuario` (
   `Fecha_Alta` date DEFAULT NULL,
   `Estado` tinyint(1) NOT NULL,
   `esta_logueado` tinyint(1) DEFAULT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=19 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=20 DEFAULT CHARSET=latin1;
 
 --
 -- Volcado de datos para la tabla `usuario`
 --
 
 INSERT INTO `usuario` (`id_Usuario`, `No_Empleado`, `nombre`, `Password`, `Id_Rol`, `Fecha_Creacion`, `Fecha_Alta`, `Estado`, `esta_logueado`) VALUES
-(1, '123444', 'prueba', 0x3831444637443233344633423846353438374146353038433243373942303041, 100, '2015-07-06', NULL, 1, 1),
+(1, '123444', 'prueba', 0x3831444637443233344633423846353438374146353038433243373942303041, 100, '2015-07-06', NULL, 1, 0),
 (2, '123444', 'lmrd1', 0x4334343432303341463343313144324633424638343431374636334344333342, 100, '2015-07-28', NULL, 1, 0),
 (3, '12968', 'elizabeth', 0x3938434430463341433330434338463533333338364546344135463244413339, 100, '2015-07-29', NULL, 1, 0),
 (4, '12969', 'jorgeaguilar', 0x4637463839324138413446413633443635354334393833313736454645383542, 100, '2015-07-29', NULL, 1, 0),
@@ -6837,7 +6521,8 @@ INSERT INTO `usuario` (`id_Usuario`, `No_Empleado`, `nombre`, `Password`, `Id_Ro
 (15, '11022', 'carlosburgos', 0x3142344630413545433942344636413344394534414335333537313243453230, 10, '2015-09-03', NULL, 1, 0),
 (16, '7908', 'jhonnymembreno', 0x3042304138364245334543343739383538453742303839354139394530363031, 10, '2015-09-03', NULL, 1, 0),
 (17, '01', 'monicadormes', 0x4341394335364533393834313041323844303343423942433833343032413239, 40, '2015-09-03', NULL, 1, 0),
-(18, '11910', 'evelincanaca', 0x3331433135313943324334433839323238353643333739383739413438364336, 10, '2015-09-03', NULL, 1, 0);
+(18, '11910', 'evelincanaca', 0x3331433135313943324334433839323238353643333739383739413438364336, 10, '2015-09-03', NULL, 1, 0),
+(19, '0921', 'adfaplicano', 0x3042413039313445323636393246444635303041374634343238464430373332, 50, '2015-10-08', NULL, 1, 0);
 
 -- --------------------------------------------------------
 
@@ -6862,7 +6547,7 @@ CREATE TABLE IF NOT EXISTS `usuario_log` (
   `usuario` int(11) NOT NULL,
   `fecha_log` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `ip_conn` varchar(45) DEFAULT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=802 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=645 DEFAULT CHARSET=latin1;
 
 --
 -- Volcado de datos para la tabla `usuario_log`
@@ -7346,170 +7031,13 @@ INSERT INTO `usuario_log` (`Id_log`, `usuario`, `fecha_log`, `ip_conn`) VALUES
 (635, 1, '2015-10-08 01:27:35', '127.0.0.1'),
 (636, 1, '2015-10-08 01:46:24', '127.0.0.1'),
 (637, 1, '2015-10-08 02:36:21', '127.0.0.1'),
-(638, 1, '2015-10-08 03:26:40', '127.0.0.1'),
-(639, 1, '2015-10-08 06:24:06', '127.0.0.1'),
-(640, 1, '2015-10-08 17:22:30', '127.0.0.1'),
-(641, 1, '2015-10-14 17:44:36', '127.0.0.1'),
-(642, 1, '2015-10-14 18:08:22', '127.0.0.1'),
-(643, 1, '2015-10-14 19:43:37', '127.0.0.1'),
-(644, 1, '2015-10-14 20:56:24', '127.0.0.1'),
-(645, 1, '2015-10-14 23:08:16', '127.0.0.1'),
-(646, 1, '2015-10-17 06:34:38', '127.0.0.1'),
-(647, 1, '2015-10-17 22:37:53', '127.0.0.1'),
-(648, 1, '2015-10-18 01:31:53', '127.0.0.1'),
-(649, 1, '2015-10-18 02:19:08', '127.0.0.1'),
-(650, 1, '2015-10-18 03:22:32', '127.0.0.1'),
-(651, 1, '2015-10-18 03:55:16', '127.0.0.1'),
-(652, 1, '2015-10-18 05:05:20', '127.0.0.1'),
-(653, 1, '2015-10-18 19:22:28', '127.0.0.1'),
-(654, 1, '2015-10-18 21:21:38', '127.0.0.1'),
-(655, 1, '2015-10-19 05:08:17', '127.0.0.1'),
-(656, 1, '2015-10-19 22:15:40', '127.0.0.1'),
-(657, 1, '2015-10-26 01:09:49', '127.0.0.1'),
-(658, 1, '2015-10-26 01:47:29', '127.0.0.1'),
-(659, 1, '2015-10-30 17:35:08', '127.0.0.1'),
-(660, 1, '2015-10-30 18:16:30', '127.0.0.1'),
-(661, 1, '2015-10-30 23:49:28', '127.0.0.1'),
-(662, 1, '2015-10-31 01:39:55', '127.0.0.1'),
-(663, 1, '2015-10-31 02:44:26', '127.0.0.1'),
-(664, 1, '2015-10-31 04:40:13', '::1'),
-(665, 1, '2015-10-31 04:46:26', '::1'),
-(666, 1, '2015-10-31 04:58:10', '::1'),
-(667, 1, '2015-10-31 05:12:52', '::1'),
-(668, 1, '2015-10-31 05:17:11', '::1'),
-(669, 1, '2015-10-31 05:25:33', '::1'),
-(670, 1, '2015-10-31 05:39:02', '::1'),
-(671, 1, '2015-10-31 05:43:12', '::1'),
-(672, 1, '2015-10-31 06:20:40', '::1'),
-(673, 1, '2015-10-31 06:41:08', '::1'),
-(674, 1, '2015-10-31 19:16:44', '::1'),
-(675, 1, '2015-10-31 23:31:47', '::1'),
-(676, 1, '2015-10-31 23:43:58', '::1'),
-(677, 1, '2015-10-31 23:50:21', '::1'),
-(678, 1, '2015-10-31 23:59:17', '::1'),
-(679, 1, '2015-11-01 00:06:40', '::1'),
-(680, 1, '2015-11-01 00:55:46', '::1'),
-(681, 1, '2015-11-01 00:57:04', '::1'),
-(682, 1, '2015-11-01 01:01:05', '::1'),
-(683, 1, '2015-11-01 01:23:10', '::1'),
-(684, 1, '2015-11-01 01:27:02', '::1'),
-(685, 1, '2015-11-01 03:24:05', '::1'),
-(686, 1, '2015-11-01 04:02:07', '::1'),
-(687, 1, '2015-11-01 04:02:34', '::1'),
-(688, 1, '2015-11-01 04:02:54', '::1'),
-(689, 1, '2015-11-01 04:04:05', '::1'),
-(690, 1, '2015-11-01 04:22:07', '::1'),
-(691, 1, '2015-11-01 04:22:15', '::1'),
-(692, 1, '2015-11-01 05:14:43', '::1'),
-(693, 1, '2015-11-02 14:36:36', '::1'),
-(694, 1, '2015-11-04 13:06:15', '127.0.0.1'),
-(695, 1, '2015-11-04 13:09:03', '127.0.0.1'),
-(696, 1, '2015-11-04 14:11:50', '127.0.0.1'),
-(697, 1, '2015-11-04 21:36:22', '127.0.0.1'),
-(698, 1, '2015-11-04 22:03:39', '127.0.0.1'),
-(699, 1, '2015-11-04 23:20:44', '127.0.0.1'),
-(700, 1, '2015-11-04 23:26:42', '127.0.0.1'),
-(701, 1, '2015-11-05 04:05:06', '127.0.0.1'),
-(702, 1, '2015-11-05 04:30:38', '127.0.0.1'),
-(703, 1, '2015-11-05 04:49:00', '127.0.0.1'),
-(704, 1, '2015-11-06 18:20:53', '127.0.0.1'),
-(705, 1, '2015-11-08 17:44:08', '127.0.0.1'),
-(706, 1, '2015-11-10 04:30:59', '127.0.0.1'),
-(707, 1, '2015-11-10 05:06:43', '127.0.0.1'),
-(708, 1, '2015-11-10 06:06:58', '127.0.0.1'),
-(709, 1, '2015-11-10 19:20:02', '127.0.0.1'),
-(710, 1, '2015-11-10 19:26:55', '127.0.0.1'),
-(711, 1, '2015-11-10 20:24:01', '127.0.0.1'),
-(712, 1, '2015-11-10 20:32:38', '127.0.0.1'),
-(713, 1, '2015-11-11 02:30:36', '127.0.0.1'),
-(714, 1, '2015-11-11 20:20:49', '127.0.0.1'),
-(715, 1, '2015-11-11 20:59:01', '127.0.0.1'),
-(716, 1, '2015-11-11 21:21:43', '127.0.0.1'),
-(717, 1, '2015-11-11 21:40:50', '127.0.0.1'),
-(718, 1, '2015-11-12 18:52:26', '127.0.0.1'),
-(719, 1, '2015-11-13 16:24:12', '127.0.0.1'),
-(720, 1, '2015-11-13 17:43:00', '127.0.0.1'),
-(721, 1, '2015-11-17 04:05:42', '127.0.0.1'),
-(722, 1, '2015-11-17 05:37:26', '127.0.0.1'),
-(723, 1, '2015-11-17 06:16:05', '127.0.0.1'),
-(724, 1, '2015-11-18 03:41:52', '127.0.0.1'),
-(725, 1, '2015-11-18 04:26:13', '127.0.0.1'),
-(726, 1, '2015-11-18 14:15:31', '127.0.0.1'),
-(727, 1, '2015-11-18 14:15:31', '127.0.0.1'),
-(728, 1, '2015-11-18 15:31:21', '127.0.0.1'),
-(729, 1, '2015-11-18 15:58:30', '127.0.0.1'),
-(730, 1, '2015-11-18 16:21:52', '127.0.0.1'),
-(731, 9, '2015-11-18 16:45:58', '127.0.0.1'),
-(732, 1, '2015-11-18 16:50:48', '127.0.0.1'),
-(733, 1, '2015-11-19 15:45:09', '127.0.0.1'),
-(734, 1, '2015-11-19 20:43:53', '127.0.0.1'),
-(735, 1, '2015-11-20 03:47:50', '127.0.0.1'),
-(736, 1, '2015-11-27 03:39:55', '127.0.0.1'),
-(737, 1, '2015-11-27 04:21:00', '127.0.0.1'),
-(738, 1, '2015-11-27 05:24:25', '127.0.0.1'),
-(739, 1, '2015-11-28 01:56:36', '127.0.0.1'),
-(740, 1, '2015-11-28 02:20:58', '127.0.0.1'),
-(741, 1, '2015-11-28 03:41:31', '127.0.0.1'),
-(742, 1, '2015-11-28 04:31:38', '127.0.0.1'),
-(743, 1, '2015-11-28 06:06:18', '127.0.0.1'),
-(744, 1, '2015-11-28 07:00:27', '127.0.0.1'),
-(745, 1, '2015-11-28 15:54:37', '127.0.0.1'),
-(746, 1, '2015-11-28 16:48:53', '127.0.0.1'),
-(747, 1, '2015-11-28 17:07:33', '127.0.0.1'),
-(748, 1, '2015-11-28 18:08:23', '127.0.0.1'),
-(749, 1, '2015-11-28 18:38:42', '127.0.0.1'),
-(750, 1, '2015-11-28 19:48:38', '127.0.0.1'),
-(751, 1, '2015-11-28 20:58:15', '127.0.0.1'),
-(752, 1, '2015-11-28 22:05:06', '127.0.0.1'),
-(753, 1, '2015-11-28 23:08:26', '127.0.0.1'),
-(754, 1, '2015-11-29 02:33:00', '127.0.0.1'),
-(755, 1, '2015-11-29 03:24:55', '127.0.0.1'),
-(756, 1, '2015-11-29 05:20:29', '127.0.0.1'),
-(757, 1, '2015-11-29 06:32:05', '127.0.0.1'),
-(758, 1, '2015-11-29 07:08:10', '127.0.0.1'),
-(759, 1, '2015-11-29 17:20:04', '127.0.0.1'),
-(760, 1, '2015-11-29 17:43:19', '127.0.0.1'),
-(761, 1, '2015-11-29 19:13:59', '127.0.0.1'),
-(762, 1, '2015-11-29 20:08:47', '127.0.0.1'),
-(763, 1, '2015-11-30 01:55:24', '127.0.0.1'),
-(764, 1, '2015-11-30 02:29:42', '127.0.0.1'),
-(765, 1, '2015-11-30 03:01:45', '127.0.0.1'),
-(766, 1, '2015-11-30 04:24:41', '127.0.0.1'),
-(767, 1, '2015-11-30 05:45:19', '127.0.0.1'),
-(768, 1, '2015-11-30 15:18:37', '127.0.0.1'),
-(769, 1, '2015-11-30 15:51:08', '127.0.0.1'),
-(770, 1, '2015-12-01 05:54:22', '127.0.0.1'),
-(771, 1, '2015-12-01 06:41:27', '127.0.0.1'),
-(772, 1, '2015-12-01 08:06:37', '127.0.0.1'),
-(773, 1, '2015-12-01 15:11:55', '127.0.0.1'),
-(774, 1, '2015-12-01 16:06:47', '127.0.0.1'),
-(775, 1, '2015-12-01 16:45:19', '127.0.0.1'),
-(776, 1, '2015-12-01 20:25:05', '127.0.0.1'),
-(777, 1, '2015-12-01 21:04:02', '127.0.0.1'),
-(778, 1, '2015-12-01 21:54:07', '127.0.0.1'),
-(779, 1, '2015-12-02 07:13:09', '127.0.0.1'),
-(780, 1, '2015-12-02 20:40:35', '127.0.0.1'),
-(781, 1, '2015-12-02 21:12:02', '127.0.0.1'),
-(782, 1, '2015-12-02 21:33:41', '127.0.0.1'),
-(783, 1, '2015-12-02 21:54:19', '127.0.0.1'),
-(784, 1, '2015-12-02 22:20:58', '127.0.0.1'),
-(785, 1, '2015-12-03 02:17:24', '127.0.0.1'),
-(786, 1, '2015-12-03 03:45:11', '127.0.0.1'),
-(787, 1, '2015-12-03 04:30:01', '127.0.0.1'),
-(788, 1, '2015-12-03 04:30:01', '127.0.0.1'),
-(789, 1, '2015-12-03 05:53:02', '127.0.0.1'),
-(790, 1, '2015-12-03 06:25:19', '127.0.0.1'),
-(791, 1, '2015-12-03 07:46:19', '127.0.0.1'),
-(792, 1, '2015-12-03 18:31:20', '127.0.0.1'),
-(793, 1, '2015-12-03 18:47:25', '127.0.0.1'),
-(794, 1, '2015-12-03 20:53:32', '127.0.0.1'),
-(795, 1, '2015-12-04 00:39:50', '127.0.0.1'),
-(796, 1, '2015-12-04 03:32:01', '127.0.0.1'),
-(797, 1, '2015-12-04 04:04:52', '127.0.0.1'),
-(798, 1, '2015-12-04 04:04:52', '127.0.0.1'),
-(799, 1, '2015-12-04 04:27:20', '127.0.0.1'),
-(800, 1, '2015-12-04 07:02:46', '::1'),
-(801, 1, '2015-12-04 08:30:51', '::1');
+(638, 1, '2015-10-08 03:40:56', '127.0.0.1'),
+(639, 1, '2015-10-08 05:17:11', '127.0.0.1'),
+(640, 1, '2015-10-08 05:17:11', '127.0.0.1'),
+(641, 1, '2015-10-08 05:39:35', '127.0.0.1'),
+(642, 1, '2015-10-08 05:39:35', '127.0.0.1'),
+(643, 19, '2015-10-08 05:51:15', '127.0.0.1'),
+(644, 19, '2015-10-08 05:51:15', '127.0.0.1');
 
 -- --------------------------------------------------------
 
@@ -7544,25 +7072,30 @@ INSERT INTO `usuario_notificado` (`Id_UsuarioNotificado`, `Id_Notificacion`, `Id
 -- Indices de la tabla `actividades`
 --
 ALTER TABLE `actividades`
-  ADD PRIMARY KEY (`id_actividad`), ADD KEY `id_indicador` (`id_indicador`);
+  ADD PRIMARY KEY (`id_actividad`),
+  ADD KEY `id_indicador` (`id_indicador`);
 
 --
 -- Indices de la tabla `actividades_terminadas`
 --
 ALTER TABLE `actividades_terminadas`
-  ADD PRIMARY KEY (`id_Actividades_Terminadas`), ADD KEY `id_Actividad` (`id_Actividad`), ADD KEY `No_Empleado` (`No_Empleado`);
+  ADD PRIMARY KEY (`id_Actividades_Terminadas`),
+  ADD KEY `id_Actividad` (`id_Actividad`),
+  ADD KEY `No_Empleado` (`No_Empleado`);
 
 --
 -- Indices de la tabla `alerta`
 --
 ALTER TABLE `alerta`
-  ADD PRIMARY KEY (`Id_Alerta`), ADD KEY `fk_alerta_folios_idx` (`NroFolioGenera`);
+  ADD PRIMARY KEY (`Id_Alerta`),
+  ADD KEY `fk_alerta_folios_idx` (`NroFolioGenera`);
 
 --
 -- Indices de la tabla `area`
 --
 ALTER TABLE `area`
-  ADD PRIMARY KEY (`id_Area`), ADD KEY `id_tipo_area` (`id_tipo_area`);
+  ADD PRIMARY KEY (`id_Area`),
+  ADD KEY `id_tipo_area` (`id_tipo_area`);
 
 --
 -- Indices de la tabla `cargo`
@@ -7592,19 +7125,24 @@ ALTER TABLE `ca_areas`
 -- Indices de la tabla `ca_aulas`
 --
 ALTER TABLE `ca_aulas`
-  ADD PRIMARY KEY (`codigo`), ADD KEY `aulas_edificios_FK_idx` (`cod_edificio`);
+  ADD PRIMARY KEY (`codigo`),
+  ADD KEY `aulas_edificios_FK_idx` (`cod_edificio`);
 
 --
 -- Indices de la tabla `ca_aulas_instancias_acondicionamientos`
 --
 ALTER TABLE `ca_aulas_instancias_acondicionamientos`
-  ADD PRIMARY KEY (`cod_aula`), ADD KEY `a_i_a_instancias_acondicionamientos_FK_idx` (`cod_instancia_acondicionamiento`);
+  ADD PRIMARY KEY (`cod_aula`),
+  ADD KEY `a_i_a_instancias_acondicionamientos_FK_idx` (`cod_instancia_acondicionamiento`);
 
 --
 -- Indices de la tabla `ca_cargas_academicas`
 --
 ALTER TABLE `ca_cargas_academicas`
-  ADD PRIMARY KEY (`codigo`), ADD KEY `cargas_academicas_periodos_FK_idx` (`cod_periodo`), ADD KEY `cargas_academicas_empleados_FK_idx` (`no_empleado`,`dni_empleado`), ADD KEY `cargas_academicas_estados_FK_idx` (`cod_estado`);
+  ADD PRIMARY KEY (`codigo`),
+  ADD KEY `cargas_academicas_periodos_FK_idx` (`cod_periodo`),
+  ADD KEY `cargas_academicas_empleados_FK_idx` (`no_empleado`,`dni_empleado`),
+  ADD KEY `cargas_academicas_estados_FK_idx` (`cod_estado`);
 
 --
 -- Indices de la tabla `ca_contratos`
@@ -7616,13 +7154,19 @@ ALTER TABLE `ca_contratos`
 -- Indices de la tabla `ca_cursos`
 --
 ALTER TABLE `ca_cursos`
-  ADD PRIMARY KEY (`codigo`), ADD KEY `cursos_cargas_FK_idx` (`cod_carga`), ADD KEY `cursos_secciones_FK_idx` (`cod_seccion`), ADD KEY `cursos_asignaturas_FK_idx` (`cod_asignatura`), ADD KEY `cursos_aulas_FK_idx` (`cod_aula`), ADD KEY `cursos_empleados_FK_idx` (`no_empleado`,`dni_empleado`);
+  ADD PRIMARY KEY (`codigo`),
+  ADD KEY `cursos_cargas_FK_idx` (`cod_carga`),
+  ADD KEY `cursos_secciones_FK_idx` (`cod_seccion`),
+  ADD KEY `cursos_asignaturas_FK_idx` (`cod_asignatura`),
+  ADD KEY `cursos_aulas_FK_idx` (`cod_aula`),
+  ADD KEY `cursos_empleados_FK_idx` (`no_empleado`,`dni_empleado`);
 
 --
 -- Indices de la tabla `ca_cursos_dias`
 --
 ALTER TABLE `ca_cursos_dias`
-  ADD PRIMARY KEY (`cod_curso`,`cod_dia`), ADD KEY `cursos_dias_dias_FK_idx` (`cod_dia`);
+  ADD PRIMARY KEY (`cod_curso`,`cod_dia`),
+  ADD KEY `cursos_dias_dias_FK_idx` (`cod_dia`);
 
 --
 -- Indices de la tabla `ca_dias`
@@ -7634,13 +7178,16 @@ ALTER TABLE `ca_dias`
 -- Indices de la tabla `ca_empleados_contratos`
 --
 ALTER TABLE `ca_empleados_contratos`
-  ADD PRIMARY KEY (`no_empleado`,`dni_empleado`), ADD KEY `e_c_contratos_FK_idx` (`cod_contrato`);
+  ADD PRIMARY KEY (`no_empleado`,`dni_empleado`),
+  ADD KEY `e_c_contratos_FK_idx` (`cod_contrato`);
 
 --
 -- Indices de la tabla `ca_empleados_proyectos`
 --
 ALTER TABLE `ca_empleados_proyectos`
-  ADD PRIMARY KEY (`no_empleado`,`dni_empleado`), ADD KEY `d_e_p_proyectos_FK_idx` (`cod_proyecto`), ADD KEY `d_e_p_roles_proyecto_FK_idx` (`cod_rol_proyecto`);
+  ADD PRIMARY KEY (`no_empleado`,`dni_empleado`),
+  ADD KEY `d_e_p_proyectos_FK_idx` (`cod_proyecto`),
+  ADD KEY `d_e_p_roles_proyecto_FK_idx` (`cod_rol_proyecto`);
 
 --
 -- Indices de la tabla `ca_estados_carga`
@@ -7658,13 +7205,16 @@ ALTER TABLE `ca_facultades`
 -- Indices de la tabla `ca_instancias_acondicionamientos`
 --
 ALTER TABLE `ca_instancias_acondicionamientos`
-  ADD PRIMARY KEY (`codigo`), ADD KEY `instancias_acondicionamientos_acondicionamientos_FK_idx` (`cod_acondicionamiento`);
+  ADD PRIMARY KEY (`codigo`),
+  ADD KEY `instancias_acondicionamientos_acondicionamientos_FK_idx` (`cod_acondicionamiento`);
 
 --
 -- Indices de la tabla `ca_proyectos`
 --
 ALTER TABLE `ca_proyectos`
-  ADD PRIMARY KEY (`codigo`), ADD KEY `proyectos_vinculaciones_FK_idx` (`cod_vinculacion`), ADD KEY `proyectos_areas_FK_idx` (`cod_area`);
+  ADD PRIMARY KEY (`codigo`),
+  ADD KEY `proyectos_vinculaciones_FK_idx` (`cod_vinculacion`),
+  ADD KEY `proyectos_areas_FK_idx` (`cod_area`);
 
 --
 -- Indices de la tabla `ca_roles_proyecto`
@@ -7682,7 +7232,8 @@ ALTER TABLE `ca_secciones`
 -- Indices de la tabla `ca_vinculaciones`
 --
 ALTER TABLE `ca_vinculaciones`
-  ADD PRIMARY KEY (`codigo`), ADD KEY `vinculaciones_facultades_FK_idx` (`cod_facultad`);
+  ADD PRIMARY KEY (`codigo`),
+  ADD KEY `vinculaciones_facultades_FK_idx` (`cod_facultad`);
 
 --
 -- Indices de la tabla `clases`
@@ -7694,13 +7245,16 @@ ALTER TABLE `clases`
 -- Indices de la tabla `clases_has_experiencia_academica`
 --
 ALTER TABLE `clases_has_experiencia_academica`
-  ADD PRIMARY KEY (`ID_Clases`,`ID_Experiencia_academica`), ADD KEY `fk_Clases_has_Experiencia_academica_Experiencia_academica1_idx` (`ID_Experiencia_academica`), ADD KEY `fk_Clases_has_Experiencia_academica_Clases1_idx` (`ID_Clases`);
+  ADD PRIMARY KEY (`ID_Clases`,`ID_Experiencia_academica`),
+  ADD KEY `fk_Clases_has_Experiencia_academica_Experiencia_academica1_idx` (`ID_Experiencia_academica`),
+  ADD KEY `fk_Clases_has_Experiencia_academica_Clases1_idx` (`ID_Clases`);
 
 --
 -- Indices de la tabla `costo_porcentaje_actividad_por_trimestre`
 --
 ALTER TABLE `costo_porcentaje_actividad_por_trimestre`
-  ADD PRIMARY KEY (`id_Costo_Porcentaje_Actividad_Por_Trimesrte`), ADD KEY `id_Actividad` (`id_Actividad`);
+  ADD PRIMARY KEY (`id_Costo_Porcentaje_Actividad_Por_Trimesrte`),
+  ADD KEY `id_Actividad` (`id_Actividad`);
 
 --
 -- Indices de la tabla `departamento_laboral`
@@ -7718,13 +7272,20 @@ ALTER TABLE `edificios`
 -- Indices de la tabla `empleado`
 --
 ALTER TABLE `empleado`
-  ADD PRIMARY KEY (`No_Empleado`,`N_identidad`), ADD UNIQUE KEY `No_Empleado_2` (`No_Empleado`), ADD KEY `fk_Empleado_Persona1_idx` (`N_identidad`), ADD KEY `fk_empleado_dep_idx` (`Id_departamento`), ADD KEY `No_Empleado` (`No_Empleado`);
+  ADD PRIMARY KEY (`No_Empleado`,`N_identidad`),
+  ADD UNIQUE KEY `No_Empleado_2` (`No_Empleado`),
+  ADD KEY `fk_Empleado_Persona1_idx` (`N_identidad`),
+  ADD KEY `fk_empleado_dep_idx` (`Id_departamento`),
+  ADD KEY `No_Empleado` (`No_Empleado`);
 
 --
 -- Indices de la tabla `empleado_has_cargo`
 --
 ALTER TABLE `empleado_has_cargo`
-  ADD PRIMARY KEY (`No_Empleado`,`ID_cargo`), ADD KEY `fk_Empleado_has_Cargo_Cargo1_idx` (`ID_cargo`), ADD KEY `fk_Empleado_has_Cargo_Empleado1_idx` (`No_Empleado`), ADD KEY `No_Empleado` (`No_Empleado`);
+  ADD PRIMARY KEY (`No_Empleado`,`ID_cargo`),
+  ADD KEY `fk_Empleado_has_Cargo_Cargo1_idx` (`ID_cargo`),
+  ADD KEY `fk_Empleado_has_Cargo_Empleado1_idx` (`No_Empleado`),
+  ADD KEY `No_Empleado` (`No_Empleado`);
 
 --
 -- Indices de la tabla `estado_seguimiento`
@@ -7736,31 +7297,44 @@ ALTER TABLE `estado_seguimiento`
 -- Indices de la tabla `estudios_academico`
 --
 ALTER TABLE `estudios_academico`
-  ADD PRIMARY KEY (`ID_Estudios_academico`), ADD KEY `fk_Estudios_academico_Tipo_estudio1_idx` (`ID_Tipo_estudio`), ADD KEY `fk_Estudios_academico_Persona1_idx` (`N_identidad`), ADD KEY `fk_estudio_universidad_idx` (`Id_universidad`);
+  ADD PRIMARY KEY (`ID_Estudios_academico`),
+  ADD KEY `fk_Estudios_academico_Tipo_estudio1_idx` (`ID_Tipo_estudio`),
+  ADD KEY `fk_Estudios_academico_Persona1_idx` (`N_identidad`),
+  ADD KEY `fk_estudio_universidad_idx` (`Id_universidad`);
 
 --
 -- Indices de la tabla `experiencia_academica`
 --
 ALTER TABLE `experiencia_academica`
-  ADD PRIMARY KEY (`ID_Experiencia_academica`), ADD KEY `fk_Experiencia_academica_Persona1_idx` (`N_identidad`);
+  ADD PRIMARY KEY (`ID_Experiencia_academica`),
+  ADD KEY `fk_Experiencia_academica_Persona1_idx` (`N_identidad`);
 
 --
 -- Indices de la tabla `experiencia_laboral`
 --
 ALTER TABLE `experiencia_laboral`
-  ADD PRIMARY KEY (`ID_Experiencia_laboral`), ADD KEY `fk_Experiencia_laboral_Persona1_idx` (`N_identidad`);
+  ADD PRIMARY KEY (`ID_Experiencia_laboral`),
+  ADD KEY `fk_Experiencia_laboral_Persona1_idx` (`N_identidad`);
 
 --
 -- Indices de la tabla `experiencia_laboral_has_cargo`
 --
 ALTER TABLE `experiencia_laboral_has_cargo`
-  ADD PRIMARY KEY (`ID_Experiencia_laboral`,`ID_cargo`), ADD KEY `fk_Experiencia_laboral_has_Cargo_Cargo1_idx` (`ID_cargo`), ADD KEY `fk_Experiencia_laboral_has_Cargo_Experiencia_laboral1_idx` (`ID_Experiencia_laboral`);
+  ADD PRIMARY KEY (`ID_Experiencia_laboral`,`ID_cargo`),
+  ADD KEY `fk_Experiencia_laboral_has_Cargo_Cargo1_idx` (`ID_cargo`),
+  ADD KEY `fk_Experiencia_laboral_has_Cargo_Experiencia_laboral1_idx` (`ID_Experiencia_laboral`);
 
 --
 -- Indices de la tabla `folios`
 --
 ALTER TABLE `folios`
-  ADD PRIMARY KEY (`NroFolio`), ADD KEY `fk_folios_unidad_academica_unidadAcademica_idx` (`UnidadAcademica`), ADD KEY `fk_folios_organizacion_organizacion_idx` (`Organizacion`), ADD KEY `fk_folios_tblTipoPrioridad_idx` (`Prioridad`), ADD KEY `fk_folios_ubicacion_archivofisico_ubicacionFisica_idx` (`UbicacionFisica`), ADD KEY `fk_folio_folioRespuesta_idx` (`NroFolioRespuesta`), ADD KEY `fk_folios_categoria_idx` (`Categoria`);
+  ADD PRIMARY KEY (`NroFolio`),
+  ADD KEY `fk_folios_unidad_academica_unidadAcademica_idx` (`UnidadAcademica`),
+  ADD KEY `fk_folios_organizacion_organizacion_idx` (`Organizacion`),
+  ADD KEY `fk_folios_tblTipoPrioridad_idx` (`Prioridad`),
+  ADD KEY `fk_folios_ubicacion_archivofisico_ubicacionFisica_idx` (`UbicacionFisica`),
+  ADD KEY `fk_folio_folioRespuesta_idx` (`NroFolioRespuesta`),
+  ADD KEY `fk_folios_categoria_idx` (`Categoria`);
 
 --
 -- Indices de la tabla `grupo_o_comite`
@@ -7772,7 +7346,9 @@ ALTER TABLE `grupo_o_comite`
 -- Indices de la tabla `grupo_o_comite_has_empleado`
 --
 ALTER TABLE `grupo_o_comite_has_empleado`
-  ADD PRIMARY KEY (`ID_Grupo_o_comite`,`No_Empleado`), ADD KEY `fk_Grupo_o_comite_has_Empleado_Empleado1_idx` (`No_Empleado`), ADD KEY `fk_Grupo_o_comite_has_Empleado_Grupo_o_comite1_idx` (`ID_Grupo_o_comite`);
+  ADD PRIMARY KEY (`ID_Grupo_o_comite`,`No_Empleado`),
+  ADD KEY `fk_Grupo_o_comite_has_Empleado_Empleado1_idx` (`No_Empleado`),
+  ADD KEY `fk_Grupo_o_comite_has_Empleado_Grupo_o_comite1_idx` (`ID_Grupo_o_comite`);
 
 --
 -- Indices de la tabla `idioma`
@@ -7784,13 +7360,16 @@ ALTER TABLE `idioma`
 -- Indices de la tabla `idioma_has_persona`
 --
 ALTER TABLE `idioma_has_persona`
-  ADD PRIMARY KEY (`Id`), ADD KEY `fk_Idioma_has_Persona_Persona1_idx` (`N_identidad`), ADD KEY `fk_Idioma_has_Persona_Idioma_idx` (`ID_Idioma`);
+  ADD PRIMARY KEY (`Id`),
+  ADD KEY `fk_Idioma_has_Persona_Persona1_idx` (`N_identidad`),
+  ADD KEY `fk_Idioma_has_Persona_Idioma_idx` (`ID_Idioma`);
 
 --
 -- Indices de la tabla `indicadores`
 --
 ALTER TABLE `indicadores`
-  ADD PRIMARY KEY (`id_Indicadores`), ADD KEY `id_ObjetivosInsitucionales` (`id_ObjetivosInsitucionales`);
+  ADD PRIMARY KEY (`id_Indicadores`),
+  ADD KEY `id_ObjetivosInsitucionales` (`id_ObjetivosInsitucionales`);
 
 --
 -- Indices de la tabla `motivos`
@@ -7802,13 +7381,18 @@ ALTER TABLE `motivos`
 -- Indices de la tabla `notificaciones_folios`
 --
 ALTER TABLE `notificaciones_folios`
-  ADD PRIMARY KEY (`Id_Notificacion`,`IdEmisor`), ADD KEY `fk_notificaciones_folios_folios_idx` (`NroFolio`), ADD KEY `fk_usuario_notificaciones_idx` (`IdEmisor`);
+  ADD PRIMARY KEY (`Id_Notificacion`,`IdEmisor`),
+  ADD KEY `fk_notificaciones_folios_folios_idx` (`NroFolio`),
+  ADD KEY `fk_usuario_notificaciones_idx` (`IdEmisor`);
 
 --
 -- Indices de la tabla `objetivos_institucionales`
 --
 ALTER TABLE `objetivos_institucionales`
-  ADD PRIMARY KEY (`id_Objetivo`), ADD KEY `id_Area` (`id_Area`), ADD KEY `id_Poa` (`id_Poa`), ADD KEY `id_Area_2` (`id_Area`);
+  ADD PRIMARY KEY (`id_Objetivo`),
+  ADD KEY `id_Area` (`id_Area`),
+  ADD KEY `id_Poa` (`id_Poa`),
+  ADD KEY `id_Area_2` (`id_Area`);
 
 --
 -- Indices de la tabla `organizacion`
@@ -7826,7 +7410,13 @@ ALTER TABLE `pais`
 -- Indices de la tabla `permisos`
 --
 ALTER TABLE `permisos`
-  ADD PRIMARY KEY (`id_Permisos`), ADD KEY `fk_motivo_idx` (`id_motivo`), ADD KEY `fk_empleado_idx` (`No_Empleado`), ADD KEY `fk_edificio_registro_idx` (`id_Edificio_Registro`), ADD KEY `fk_revisado_idx` (`revisado_por`), ADD KEY `fk_departamento_idx` (`id_departamento`), ADD KEY `fk_usuario_idx` (`id_usuario`);
+  ADD PRIMARY KEY (`id_Permisos`),
+  ADD KEY `fk_motivo_idx` (`id_motivo`),
+  ADD KEY `fk_empleado_idx` (`No_Empleado`),
+  ADD KEY `fk_edificio_registro_idx` (`id_Edificio_Registro`),
+  ADD KEY `fk_revisado_idx` (`revisado_por`),
+  ADD KEY `fk_departamento_idx` (`id_departamento`),
+  ADD KEY `fk_usuario_idx` (`id_usuario`);
 
 --
 -- Indices de la tabla `persona`
@@ -7850,13 +7440,17 @@ ALTER TABLE `prioridad`
 -- Indices de la tabla `prioridad_folio`
 --
 ALTER TABLE `prioridad_folio`
-  ADD PRIMARY KEY (`Id_PrioridadFolio`), ADD KEY `fk_prioridad_folio_folios_idx` (`IdFolio`), ADD KEY `fk_prioridad_folio_prioridad_idx` (`Id_Prioridad`);
+  ADD PRIMARY KEY (`Id_PrioridadFolio`),
+  ADD KEY `fk_prioridad_folio_folios_idx` (`IdFolio`),
+  ADD KEY `fk_prioridad_folio_prioridad_idx` (`Id_Prioridad`);
 
 --
 -- Indices de la tabla `responsables_por_actividad`
 --
 ALTER TABLE `responsables_por_actividad`
-  ADD PRIMARY KEY (`id_Responsable_por_Actividad`), ADD KEY `id_Actividad` (`id_Actividad`,`id_Responsable`), ADD KEY `id_Responsable` (`id_Responsable`);
+  ADD PRIMARY KEY (`id_Responsable_por_Actividad`),
+  ADD KEY `id_Actividad` (`id_Actividad`,`id_Responsable`),
+  ADD KEY `id_Responsable` (`id_Responsable`);
 
 --
 -- Indices de la tabla `roles`
@@ -7880,7 +7474,12 @@ ALTER TABLE `sa_estados_solicitud`
 -- Indices de la tabla `sa_estudiantes`
 --
 ALTER TABLE `sa_estudiantes`
-  ADD PRIMARY KEY (`dni`), ADD UNIQUE KEY `no_cuenta_estudiantes_UC` (`no_cuenta`), ADD KEY `estudiante_plan_FK_idx` (`cod_plan_estudio`), ADD KEY `estudiante_ciudad_FK_idx` (`cod_ciudad_origen`), ADD KEY `estudiante_orientacion_FK_idx` (`cod_orientacion`), ADD KEY `estudiantes_lugar_origen_FK_idx` (`cod_residencia_actual`);
+  ADD PRIMARY KEY (`dni`),
+  ADD UNIQUE KEY `no_cuenta_estudiantes_UC` (`no_cuenta`),
+  ADD KEY `estudiante_plan_FK_idx` (`cod_plan_estudio`),
+  ADD KEY `estudiante_ciudad_FK_idx` (`cod_ciudad_origen`),
+  ADD KEY `estudiante_orientacion_FK_idx` (`cod_orientacion`),
+  ADD KEY `estudiantes_lugar_origen_FK_idx` (`cod_residencia_actual`);
 
 --
 -- Indices de la tabla `sa_estudiantes_correos`
@@ -7892,13 +7491,15 @@ ALTER TABLE `sa_estudiantes_correos`
 -- Indices de la tabla `sa_estudiantes_menciones_honorificas`
 --
 ALTER TABLE `sa_estudiantes_menciones_honorificas`
-  ADD PRIMARY KEY (`dni_estudiante`,`cod_mencion`), ADD KEY `estudiante_mencion_mencion_FK_idx` (`cod_mencion`);
+  ADD PRIMARY KEY (`dni_estudiante`,`cod_mencion`),
+  ADD KEY `estudiante_mencion_mencion_FK_idx` (`cod_mencion`);
 
 --
 -- Indices de la tabla `sa_estudiantes_tipos_estudiantes`
 --
 ALTER TABLE `sa_estudiantes_tipos_estudiantes`
-  ADD PRIMARY KEY (`codigo_tipo_estudiante`,`dni_estudiante`), ADD KEY `sa_estudiantes_tipos_estudiantes_estudiantes_idx` (`dni_estudiante`);
+  ADD PRIMARY KEY (`codigo_tipo_estudiante`,`dni_estudiante`),
+  ADD KEY `sa_estudiantes_tipos_estudiantes_estudiantes_idx` (`dni_estudiante`);
 
 --
 -- Indices de la tabla `sa_examenes_himno`
@@ -7934,7 +7535,12 @@ ALTER TABLE `sa_planes_estudio`
 -- Indices de la tabla `sa_solicitudes`
 --
 ALTER TABLE `sa_solicitudes`
-  ADD PRIMARY KEY (`codigo`,`fecha_solicitud`), ADD KEY `solicitud_estudiante_FK_idx` (`dni_estudiante`), ADD KEY `solicitud_periodo_FK_idx` (`cod_periodo`), ADD KEY `solicitud_estados_solicitud_FK_idx` (`cod_estado`), ADD KEY `solicitud_tipo_solicitud_FK_idx` (`cod_tipo_solicitud`), ADD KEY `solicitud_solicitud_FK_idx` (`cod_solicitud_padre`,`fecha_solicitud_padre`);
+  ADD PRIMARY KEY (`codigo`,`fecha_solicitud`),
+  ADD KEY `solicitud_estudiante_FK_idx` (`dni_estudiante`),
+  ADD KEY `solicitud_periodo_FK_idx` (`cod_periodo`),
+  ADD KEY `solicitud_estados_solicitud_FK_idx` (`cod_estado`),
+  ADD KEY `solicitud_tipo_solicitud_FK_idx` (`cod_tipo_solicitud`),
+  ADD KEY `solicitud_solicitud_FK_idx` (`cod_solicitud_padre`,`fecha_solicitud_padre`);
 
 --
 -- Indices de la tabla `sa_tipos_estudiante`
@@ -7952,43 +7558,47 @@ ALTER TABLE `sa_tipos_solicitud`
 -- Indices de la tabla `sa_tipos_solicitud_tipos_alumnos`
 --
 ALTER TABLE `sa_tipos_solicitud_tipos_alumnos`
-  ADD PRIMARY KEY (`cod_tipo_solicitud`,`cod_tipo_alumno`), ADD KEY `tipo_alumno_tipo_solicitud_t_a_FK_idx` (`cod_tipo_alumno`);
+  ADD PRIMARY KEY (`cod_tipo_solicitud`,`cod_tipo_alumno`),
+  ADD KEY `tipo_alumno_tipo_solicitud_t_a_FK_idx` (`cod_tipo_alumno`);
 
 --
 -- Indices de la tabla `seguimiento`
 --
 ALTER TABLE `seguimiento`
-  ADD PRIMARY KEY (`Id_Seguimiento`), ADD KEY `fk_seguimiento_folios_idx` (`NroFolio`), ADD KEY `fk_seguimiento_usuarioAsignado_idx` (`UsuarioAsignado`);
+  ADD PRIMARY KEY (`Id_Seguimiento`),
+  ADD KEY `fk_seguimiento_folios_idx` (`NroFolio`),
+  ADD KEY `fk_seguimiento_usuarioAsignado_idx` (`UsuarioAsignado`);
 
 --
 -- Indices de la tabla `seguimiento_historico`
 --
 ALTER TABLE `seguimiento_historico`
-  ADD PRIMARY KEY (`Id_SeguimientoHistorico`), ADD KEY `fk_seguimiento_historico_seguimiento` (`Id_Seguimiento`), ADD KEY `fk_seguimiento_historico_tblEstdoSeguimiento_idx` (`Id_Estado_Seguimiento`);
+  ADD PRIMARY KEY (`Id_SeguimientoHistorico`),
+  ADD KEY `fk_seguimiento_historico_seguimiento` (`Id_Seguimiento`),
+  ADD KEY `fk_seguimiento_historico_tblEstdoSeguimiento_idx` (`Id_Estado_Seguimiento`);
 
 --
 -- Indices de la tabla `sub_actividad`
 --
 ALTER TABLE `sub_actividad`
-  ADD PRIMARY KEY (`id_sub_Actividad`), ADD KEY `idActividad` (`idActividad`), ADD KEY `id_Encargado(Usuario)` (`id_Encargado`);
+  ADD PRIMARY KEY (`id_sub_Actividad`),
+  ADD KEY `idActividad` (`idActividad`),
+  ADD KEY `id_Encargado(Usuario)` (`id_Encargado`);
 
 --
 -- Indices de la tabla `sub_actividades_realizadas`
 --
 ALTER TABLE `sub_actividades_realizadas`
-  ADD PRIMARY KEY (`id_subActividadRealizada`), ADD UNIQUE KEY `id_SubActividad_2` (`id_SubActividad`), ADD KEY `id_SubActividad` (`id_SubActividad`);
+  ADD PRIMARY KEY (`id_subActividadRealizada`),
+  ADD UNIQUE KEY `id_SubActividad_2` (`id_SubActividad`),
+  ADD KEY `id_SubActividad` (`id_SubActividad`);
 
 --
 -- Indices de la tabla `telefono`
 --
 ALTER TABLE `telefono`
-  ADD PRIMARY KEY (`ID_Telefono`), ADD KEY `fk_Telefono_Persona1_idx` (`N_identidad`);
-
---
--- Indices de la tabla `tipodepermiso`
---
-ALTER TABLE `tipodepermiso`
-  ADD PRIMARY KEY (`id_tipo_permiso`);
+  ADD PRIMARY KEY (`ID_Telefono`),
+  ADD KEY `fk_Telefono_Persona1_idx` (`N_identidad`);
 
 --
 -- Indices de la tabla `tipo_area`
@@ -8030,19 +7640,24 @@ ALTER TABLE `unidad_academica`
 -- Indices de la tabla `universidad`
 --
 ALTER TABLE `universidad`
-  ADD PRIMARY KEY (`Id_universidad`), ADD KEY `fk_universidad_pais_idx` (`Id_pais`);
+  ADD PRIMARY KEY (`Id_universidad`),
+  ADD KEY `fk_universidad_pais_idx` (`Id_pais`);
 
 --
 -- Indices de la tabla `usuario`
 --
 ALTER TABLE `usuario`
-  ADD PRIMARY KEY (`id_Usuario`), ADD KEY `fk_usuarios_roles_idx` (`Id_Rol`), ADD KEY `fk_usuario_empleado_` (`No_Empleado`);
+  ADD PRIMARY KEY (`id_Usuario`),
+  ADD KEY `fk_usuarios_roles_idx` (`Id_Rol`),
+  ADD KEY `fk_usuario_empleado_` (`No_Empleado`);
 
 --
 -- Indices de la tabla `usuario_alertado`
 --
 ALTER TABLE `usuario_alertado`
-  ADD PRIMARY KEY (`Id_UsuarioAlertado`), ADD KEY `fk_usuario_alertado_usuario_idx` (`Id_Usuario`), ADD KEY `fk_usuario_alertado_alerta_idx` (`Id_Alerta`);
+  ADD PRIMARY KEY (`Id_UsuarioAlertado`),
+  ADD KEY `fk_usuario_alertado_usuario_idx` (`Id_Usuario`),
+  ADD KEY `fk_usuario_alertado_alerta_idx` (`Id_Alerta`);
 
 --
 -- Indices de la tabla `usuario_log`
@@ -8054,7 +7669,10 @@ ALTER TABLE `usuario_log`
 -- Indices de la tabla `usuario_notificado`
 --
 ALTER TABLE `usuario_notificado`
-  ADD PRIMARY KEY (`Id_UsuarioNotificado`), ADD KEY `fk_usuario_notificado_notificaciones_folios_idx` (`Id_Notificacion`), ADD KEY `fk_usuario_notificado_ubicacion_notificacionesFolios` (`IdUbicacionNotificacion`), ADD KEY `fk_usuario_notificado_usuario_idx` (`Id_Usuario`);
+  ADD PRIMARY KEY (`Id_UsuarioNotificado`),
+  ADD KEY `fk_usuario_notificado_notificaciones_folios_idx` (`Id_Notificacion`),
+  ADD KEY `fk_usuario_notificado_ubicacion_notificacionesFolios` (`IdUbicacionNotificacion`),
+  ADD KEY `fk_usuario_notificado_usuario_idx` (`Id_Usuario`);
 
 --
 -- AUTO_INCREMENT de las tablas volcadas
@@ -8079,7 +7697,7 @@ ALTER TABLE `alerta`
 -- AUTO_INCREMENT de la tabla `area`
 --
 ALTER TABLE `area`
-  MODIFY `id_Area` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=23;
+  MODIFY `id_Area` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=21;
 --
 -- AUTO_INCREMENT de la tabla `cargo`
 --
@@ -8094,7 +7712,7 @@ ALTER TABLE `categorias_folios`
 -- AUTO_INCREMENT de la tabla `ca_acondicionamientos`
 --
 ALTER TABLE `ca_acondicionamientos`
-  MODIFY `codigo` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=23;
+  MODIFY `codigo` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=22;
 --
 -- AUTO_INCREMENT de la tabla `ca_areas`
 --
@@ -8109,7 +7727,7 @@ ALTER TABLE `ca_aulas`
 -- AUTO_INCREMENT de la tabla `ca_cargas_academicas`
 --
 ALTER TABLE `ca_cargas_academicas`
-  MODIFY `codigo` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `codigo` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3;
 --
 -- AUTO_INCREMENT de la tabla `ca_contratos`
 --
@@ -8119,7 +7737,7 @@ ALTER TABLE `ca_contratos`
 -- AUTO_INCREMENT de la tabla `ca_cursos`
 --
 ALTER TABLE `ca_cursos`
-  MODIFY `codigo` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `codigo` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=2;
 --
 -- AUTO_INCREMENT de la tabla `ca_dias`
 --
@@ -8154,7 +7772,7 @@ ALTER TABLE `ca_vinculaciones`
 -- AUTO_INCREMENT de la tabla `clases`
 --
 ALTER TABLE `clases`
-  MODIFY `ID_Clases` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=74;
+  MODIFY `ID_Clases` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=72;
 --
 -- AUTO_INCREMENT de la tabla `costo_porcentaje_actividad_por_trimestre`
 --
@@ -8279,12 +7897,12 @@ ALTER TABLE `sa_orientaciones`
 -- AUTO_INCREMENT de la tabla `sa_planes_estudio`
 --
 ALTER TABLE `sa_planes_estudio`
-  MODIFY `codigo` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=26;
+  MODIFY `codigo` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=24;
 --
 -- AUTO_INCREMENT de la tabla `sa_solicitudes`
 --
 ALTER TABLE `sa_solicitudes`
-  MODIFY `codigo` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=54;
+  MODIFY `codigo` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=39;
 --
 -- AUTO_INCREMENT de la tabla `sa_tipos_estudiante`
 --
@@ -8294,7 +7912,7 @@ ALTER TABLE `sa_tipos_estudiante`
 -- AUTO_INCREMENT de la tabla `sa_tipos_solicitud`
 --
 ALTER TABLE `sa_tipos_solicitud`
-  MODIFY `codigo` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=123492;
+  MODIFY `codigo` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=123487;
 --
 -- AUTO_INCREMENT de la tabla `seguimiento`
 --
@@ -8304,7 +7922,7 @@ ALTER TABLE `seguimiento`
 -- AUTO_INCREMENT de la tabla `seguimiento_historico`
 --
 ALTER TABLE `seguimiento_historico`
-  MODIFY `Id_SeguimientoHistorico` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=16;
+  MODIFY `Id_SeguimientoHistorico` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=9;
 --
 -- AUTO_INCREMENT de la tabla `sub_actividad`
 --
@@ -8319,17 +7937,12 @@ ALTER TABLE `sub_actividades_realizadas`
 -- AUTO_INCREMENT de la tabla `telefono`
 --
 ALTER TABLE `telefono`
-  MODIFY `ID_Telefono` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=44;
---
--- AUTO_INCREMENT de la tabla `tipodepermiso`
---
-ALTER TABLE `tipodepermiso`
-  MODIFY `id_tipo_permiso` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=5;
+  MODIFY `ID_Telefono` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=27;
 --
 -- AUTO_INCREMENT de la tabla `tipo_area`
 --
 ALTER TABLE `tipo_area`
-  MODIFY `id_Tipo_Area` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=11;
+  MODIFY `id_Tipo_Area` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=10;
 --
 -- AUTO_INCREMENT de la tabla `tipo_estudio`
 --
@@ -8364,7 +7977,7 @@ ALTER TABLE `universidad`
 -- AUTO_INCREMENT de la tabla `usuario`
 --
 ALTER TABLE `usuario`
-  MODIFY `id_Usuario` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=19;
+  MODIFY `id_Usuario` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=20;
 --
 -- AUTO_INCREMENT de la tabla `usuario_alertado`
 --
@@ -8374,7 +7987,7 @@ ALTER TABLE `usuario_alertado`
 -- AUTO_INCREMENT de la tabla `usuario_log`
 --
 ALTER TABLE `usuario_log`
-  MODIFY `Id_log` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=802;
+  MODIFY `Id_log` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=645;
 --
 -- AUTO_INCREMENT de la tabla `usuario_notificado`
 --

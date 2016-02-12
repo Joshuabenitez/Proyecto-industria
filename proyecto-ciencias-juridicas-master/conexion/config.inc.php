@@ -48,8 +48,4 @@ $options = array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8');
     header('Content-Type: text/html; charset=utf-8');
  }
 
-  if(!isset($_SESSION)){
-    session_start();
-  }
-
 ?>
