@@ -21,7 +21,7 @@ $result5 = mysqli_query($conexion, $query5);
 $query6 = "SELECT * FROM categorias_folios";
 $result6 = mysqli_query($conexion, $query6);
 
-$query7 = "SELECT usuario.id_Usuario, usuario.Nombre FROM usuario WHERE Estado = 1 AND Id_rol <= 50 AND Id_rol >= 10";
+$query7 = "SELECT usuario.id_Usuario, usuario.Nombre FROM usuario WHERE Estado = 1"; // AND Id_rol <= 50 AND Id_rol >= 10
 $result7 = mysqli_query($conexion, $query7);
 
 ?>

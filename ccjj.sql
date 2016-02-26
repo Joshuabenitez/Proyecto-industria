@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Servidor: localhost
--- Tiempo de generación: 26-01-2016 a las 21:50:00
+-- Tiempo de generación: 14-02-2016 a las 14:37:53
 -- Versión del servidor: 5.0.91
 -- Versión de PHP: 5.3.6-pl0-gentoo
 
@@ -18,6 +18,4616 @@ SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 --
 -- Base de datos: `ccjj`
 --
+DROP DATABASE `ccjj`;
+CREATE DATABASE `ccjj` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
+USE `ccjj`;
+
+DELIMITER $$
+--
+-- Procedimientos
+--
+DROP PROCEDURE IF EXISTS `pa_eliminar_actividad`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_eliminar_actividad`(
+	in id_Actividades int,
+	OUT `mensaje` VARCHAR(150), 
+    OUT `codMensaje` TINYINT
+)
+SP: begin
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+
+    -- Determinar si ya se marcó como actividad terminada
+    IF EXISTS
+    (
+		SELECT actividades_terminadas.id_Actividades_Terminadas
+        FROM actividades_terminadas
+        WHERE id_actividad = id_Actividades
+    )
+    THEN
+		BEGIN
+			set mensaje := 'La actividad se marcó como actividad terminada, no puede ser borrada.';
+			LEAVE SP;
+		END;
+    END IF;
+    
+    
+    -- Determinar si la actividad ya tiene sub actividades asociadas.
+    IF EXISTS
+    (
+		SELECT id_sub_Actividad
+        FROM sub_actividad
+        WHERE idActividad = id_Actividades
+    )
+    THEN
+		BEGIN
+			set mensaje := 'La actividad ya tiene sub-actividades, para poder borrar esta actividad debería de borrar
+							las sub-actividades primero.';
+			LEAVE SP;        
+        END;
+	END IF;
+	   
+	delete from actividades where actividades.id_actividad=id_Actividades;
+END$$
+
+DROP PROCEDURE IF EXISTS `pa_eliminar_actividad_terminada`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_eliminar_actividad_terminada`(
+	in id_Actividades_Terminadas int,
+	OUT `mensaje` VARCHAR(150), 
+    OUT `codMensaje` TINYINT)
+begin
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+   
+
+	delete from actividades_terminadas where actividades_terminadas.id_Actividades_Terminadas=id_Actividades_Terminadas;
+	
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_eliminar_area`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_eliminar_area`(
+	in id_area int,
+	OUT `mensaje` VARCHAR(150), 
+    OUT `codMensaje` TINYINT)
+SP: begin
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+
+    IF EXISTS
+    (
+		SELECT id_Objetivo
+        FROM objetivos_institucionales
+        WHERE id_Area = id_area
+    )
+    THEN
+		BEGIN
+			set mensaje := 'El área ya tiene objetivos específicos asociados, no puede ser borrada.';
+			LEAVE SP;
+		END;
+    END IF;
+	
+	delete from area where tipo_area.id_Area=id_area;
+	
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_eliminar_costo_porcentaje_actividad_por_trimestre`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_eliminar_costo_porcentaje_actividad_por_trimestre`(
+	in id int,
+	OUT `mensaje` VARCHAR(150), 
+    OUT `codMensaje` TINYINT)
+begin
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+
+   
+	delete from costo_porcentaje_actividad_por_trimestre where id_Costo_Porcentaje_Actividad_Por_Trimesrte=id;
+	
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_eliminar_indicador`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_eliminar_indicador`(
+	in id_indicador int,
+	OUT `mensaje` VARCHAR(150), 
+    OUT `codMensaje` TINYINT)
+SP: begin
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+   
+   IF EXISTS
+   (
+		SELECT id_indicador
+        FROM actividades
+        WHERE actividades.id_indicador = id_indicador
+   )
+   THEN
+	BEGIN 
+		SET mensaje = "El indicador tiene actividades asociadas. No puede ser borrado.";
+        LEAVE SP;
+	END;
+	END IF;
+    
+	delete from indicadores where indicadores.id_indicadores= id_indicador;
+	
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_eliminar_objetivo_institucional`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_eliminar_objetivo_institucional`(
+	in id_objetivo int,
+	OUT `mensaje` VARCHAR(150), 
+    OUT `codMensaje` TINYINT)
+SP: begin
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+
+	-- TODO: ¿Se deben de poder eliminar objetivos institucionales cuando estas tengan ya indicadores asociados?
+    IF EXISTS
+    (
+		SELECT id_indicadores
+        FROM indicadores
+        WHERE indicadores.id_ObjetivosInsitucionales = id_objetivo
+    )
+    THEN
+		BEGIN
+			SET mensaje = "El objetivo tiene indicadores asociados, no puede ser borrado.";        
+            LEAVE SP;
+		END;
+	END IF;
+    
+    
+   
+	delete from objetivos_institucionales where objetivos_institucionales.id_Objetivo= id_objetivo;
+	
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_eliminar_poa`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_eliminar_poa`(
+	in id int,
+	OUT `mensaje` VARCHAR(150), 
+    OUT `codMensaje` TINYINT)
+SP: begin
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+   
+   IF EXISTS
+   (
+		SELECT id_Objetivo
+        FROM objetivos_institucionales
+        WHERE id_Poa = id
+   )
+	THEN
+		BEGIN
+			SET mensaje = 'El POA que intenta eliminar tiene objetivos asociados, no puede ser borrado.';
+            LEAVE SP;
+        END;
+	END IF;
+
+   
+	delete from poa where poa.id_Poa=id;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_eliminar_responsables_por_actividad`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_eliminar_responsables_por_actividad`(
+	IN `id` INT,
+	OUT `mensaje` VARCHAR(150), 
+    OUT `codMensaje` TINYINT)
+begin
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+   
+	delete from responsables_por_actividad where responsables_por_actividad.id_Responsable_por_Actividad=id;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_eliminar_sub_actividad`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_eliminar_sub_actividad`(in id_sub_Actividad int)
+begin
+delete from sub_actividad where sub_actividad.id_sub_Actividad=id_sub_Actividad;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_eliminar_sub_actividad_realizada`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_eliminar_sub_actividad_realizada`(
+	IN `id_subActividadRealizada` INT,
+	OUT `mensaje` VARCHAR(150), 
+    OUT `codMensaje` TINYINT)
+begin
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+   
+	delete from sub_actividades_realizadas where sub_actividades_realizadas.id_subActividadRealizada=id_subActividadRealizada;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_eliminar_tipo_area`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_eliminar_tipo_area`(
+	in id_tipo_area int,
+	OUT `mensaje` VARCHAR(150), 
+    OUT `codMensaje` TINYINT)
+SP: begin
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+   
+   IF EXISTS
+   (
+		SELECT id_Area
+        FROM area
+        WHERE area.id_tipo_area = id_tipo_area
+   )
+   THEN
+		BEGIN
+			SET mensaje = 'El tipo de área ya tiene asociadas áreas, no puede ser borrada.';
+            LEAVE SP;
+        END;
+   END IF;
+   
+	delete from tipo_area where tipo_area.id_Tipo_Area=id_tipo_area;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_insertar_actividad`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_insertar_actividad`(
+	IN `id_Indicador` INT, 
+	IN `descripcion` TEXT, 
+	IN `correlativo` VARCHAR(10), 
+	IN `supuestos` TEXT, 
+	IN `justificacion` TEXT, 
+	IN `medio_Verificacion` TEXT, 
+	IN `poblacion_Objetivo` VARCHAR(20), 
+	IN `fecha_Inicio` DATE, 
+	IN `fecha_Fin` DATE,
+	OUT `mensaje` VARCHAR(150), 
+    OUT `codMensaje` TINYINT)
+begin
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+   
+	insert into actividades (id_indicador, descripcion, correlativo, supuesto,justificacion,
+							medio_verificacion, poblacion_objetivo,fecha_inicio, fecha_fin) 
+	values( id_Indicador, descripcion, correlativo, supuestos, justificacion,
+			medio_Verificacion, poblacion_Objetivo,fecha_Inicio, fecha_Fin) ;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_insertar_actividades_terminadas`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_insertar_actividades_terminadas`(IN `id_Actividad` INT, IN `fecha` DATE, IN `estado` VARCHAR(15), IN `id_Usuario` VARCHAR(20), IN `observaciones` TEXT)
+begin 
+	insert into actividades_terminadas (id_Actividad, fecha, estado, No_Empleado, observaciones) values (id_Actividad, fecha, estado, id_Usuario, observaciones);
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_insertar_area`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_insertar_area`(IN `nombre` VARCHAR(30), IN `id_tipo_Area` INT, IN `observacion` TEXT)
+begin
+	insert into area (nombre,id_tipo_area,observacion) values(nombre, id_tipo_Area,observacion);
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_insertar_costo_porcentaje_actividad_por_trimestre`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_insertar_costo_porcentaje_actividad_por_trimestre`(IN `id_Actividad` INT, IN `costo` INT, IN `porcentaje` INT, IN `observacion` TEXT, IN `trimestre` INT)
+begin 
+insert into costo_porcentaje_actividad_por_trimestre (id_Actividad, costo,porcentaje,observacion, trimestre)values(id_Actividad, costo,porcentaje,observacion, trimestre);
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_insertar_indicador`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_insertar_indicador`(IN `id_ObjetivosInstitucionales` INT, IN `nombre` VARCHAR(30), IN `descripcion` TEXT)
+begin
+	insert into indicadores (id_ObjetivosInsitucionales, nombre, descripcion) values (id_ObjetivosInstitucionales, nombre, descripcion);
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_insertar_objetivos_institucionales`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_insertar_objetivos_institucionales`(IN `definicion` TEXT, IN `area_Estrategica` TEXT, IN `resultados_Esperados` TEXT, IN `id_Area` INT, IN `id_Poa` INT)
+begin 
+	insert into objetivos_institucionales  (definicion,area_Estrategica,resultados_Esperados,id_Area,id_Poa) values (definicion,area_Estrategica,resultados_Esperados,id_Area,id_Poa);
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_insertar_poa`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_insertar_poa`(IN `nombre` VARCHAR(30), IN `fecha_de_Inicio` DATE, IN `fecha_Fin` DATE, IN `descripcion` TEXT)
+begin
+insert into poa (nombre,fecha_de_Inicio,fecha_Fin,descripcion) values (nombre,fecha_de_Inicio,fecha_Fin, descripcion);
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_insertar_responsables_por_actividad`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_insertar_responsables_por_actividad`(IN `id_Actividad` INT, IN `id_Responsable` INT, IN `fecha_Asignacion` DATE, IN `observacion` TEXT)
+begin
+	insert into responsables_por_actividad (id_Actividad,id_Responsable,fecha_Asignacion,observacion) values (id_Actividad,id_Responsable,fecha_Asignacion,observacion);
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_insertar_sub_actividad`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_insertar_sub_actividad`(IN `id_Actividad` INT, IN `nombre` VARCHAR(30), IN `descripcion` TEXT, IN `fecha_monitoreo` DATE, IN `id_Encargado` VARCHAR(20), IN `ponderacion` INT, IN `costo` INT, IN `observacion` TEXT)
+begin
+insert into sub_actividad (idActividad,nombre,descripcion,fecha_monitoreo,id_Encargado,ponderacion,costo,observacion) values(id_Actividad,nombre,descripcion,fecha_monitoreo,id_Encargado,ponderacion,costo,observacion);
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_insertar_sub_actividades_realizadas`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_insertar_sub_actividades_realizadas`(IN `id_SubActividad` INT, IN `fecha_Realizacion` DATE, IN `observacion` TEXT)
+begin
+	insert into sub_actividades_realizadas (id_SubActividad,fecha_Realizacion,observacion) values (id_SubActividad,fecha_Realizacion,observacion);
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_insertar_tipo_area`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_insertar_tipo_area`(IN `nombre_` TEXT, IN `observaciones_` TEXT, OUT `message_` VARCHAR(150), OUT `Tmessage_` TINYINT)
+BEGIN START TRANSACTION; IF NOT EXISTS (
+	SELECT 
+		1 
+	FROM 
+		tipo_area 
+	WHERE 
+		tipo_area.nombre = nombre_
+) THEN insert into tipo_area (nombre, observaciones) 
+values 
+	(nombre_, observaciones_); 
+SET 
+	message_ = "El nuevo tipo de área ha sido ingresada exitósamente."; 
+SET 
+	Tmessage_ = 1; ELSE 
+SET 
+	message_ = "El tipo de área que quiere ingresar ya existe."; 
+SET 
+	Tmessage_ = 0; END IF; COMMIT; END$$
+
+DROP PROCEDURE IF EXISTS `pa_modificar_actividad`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_modificar_actividad`(IN `id_Actividad` INT, IN `id_Indicador` INT, IN `descripcion` TEXT, IN `correlativo` VARCHAR(10), IN `supuestos` TEXT, IN `justificacion` TEXT, IN `medio_Verificacion` TEXT, IN `poblacion_Objetivo` VARCHAR(20), IN `fecha_Inicio` DATE, IN `fecha_Fin` DATE)
+begin
+update actividades set id_indicador=id_Indicador, descripcion=descripcion, correlativo=correlativo, supuesto=supuesto, justificacion=justificacion, medio_verificacion=medio_Verificacion, poblacion_objetivo=poblacion_Objetivo,fecha_inicio=fecha_Inicio, fecha_fin=fecha_Fin 
+where actividades.id_actividad= id_Actividad;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_modificar_actividades_terminadas`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_modificar_actividades_terminadas`(IN `id_Actividad_Terminada` INT, IN `id_Actividad` INT, IN `fecha` DATE, IN `estado` VARCHAR(15), IN `id_Usuario` VARCHAR(20), IN `observaciones` TEXT)
+begin 
+	update actividades_terminadas set id_Actividad=id_Actividad, fecha=fecha, estado=estado, No_Empleado=id_Usuario, observaciones=observaciones where actividades_terminadas.id_Actividades_Terminadas= id_Actividad_Terminada; 
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_modificar_area`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_modificar_area`(IN id_Area int ,IN nombre VARCHAR(30), IN id_tipo_Area INT, IN observacion TEXT)
+begin
+	update area set nombre=nombre,id_tipo_Area=id_tipo_Area,observaciones=observacion where area.id_Area=id_Area;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_modificar_costo_porcentaje_actividad_por_trimestre`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_modificar_costo_porcentaje_actividad_por_trimestre`(IN id_Costo_Porcentaje_Actividad_Por_Trimesrte INT,IN id_Actividad INT, IN costo INT, IN porcentaje INT, IN observacion TEXT, IN trimestre INT)
+begin 
+update costo_porcentaje_actividad_por_trimestre set id_Actividad=id_ACtividad, costo=costo,porcentaje=porcentaje,observacion=observacion, trimestre=trimestre where costo_porcentaje_actividad_por_trimestre.id_Costo_Porcentaje_Actividad_Por_Trimesrte=id_Costo_Porcentaje_Actividad_Por_Trimesrte ;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_modificar_indicador`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_modificar_indicador`(IN `id_Indicador` INT, IN `id_ObjetivosInstitucionales` INT, IN `nombre` VARCHAR(30), IN `descripcion` TEXT)
+begin
+update indicadores set id_ObjetivosInsitucionales=id_ObjetivosInstitucionales, nombre=nombre, descripcion=descripcion where indicadores.id_Indicadores=id_Indicador;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_modificar_objetivos_institucionales`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_modificar_objetivos_institucionales`(IN id_Objetivo int,IN definicion TEXT, IN area_Estrategica TEXT, IN resultados_Esperados TEXT, IN id_Area INT, IN id_Poa INT)
+begin 
+update objetivos_institucionales set definicion=definicion,area_Estrategica=area_Estrategica,resultados_Esperados=resultados_Esperados,id_Area=id_Area,id_Poa=id_Poa where objetivos_institucionales.id_Objetivo= id_Objetivo ;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_modificar_poa`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_modificar_poa`(in id_Poa int,IN nombre VARCHAR(30), IN fecha_de_Inicio DATE, IN fecha_Fin DATE, IN descripcion TEXT)
+begin
+update poa set nombre=nombre,fecha_de_Inicio=fecha_de_Inicio,fecha_Fin=fecha_Fin,descripcion=descripcion
+where poa.id_Poa=id_Poa;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_modificar_responsables_por_actividad`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_modificar_responsables_por_actividad`(IN `id_Responsable_por_Act` INT, IN `id_Actividad` INT, IN `id_Responsable` INT, IN `fecha_Asignacion` DATE, IN `observacion` TEXT)
+begin
+update responsables_por_actividad set id_Actividad=id_Actividad,id_Responsable=id_Responsable,fecha_Asignacion=Fecha_Asignacion,observacion=observacion where responsables_por_actividad.id_Responsable_por_Actividad=id_Responsable_por_Act;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_modificar_sub_actividad`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_modificar_sub_actividad`(IN `id_sub_Act` INT, IN `id_Actividad` INT, IN `nombre` VARCHAR(30), IN `descripcion` TEXT, IN `fecha_monitoreo` DATE, IN `id_Encargado` VARCHAR(20), IN `ponderacion` INT, IN `costo` INT, IN `observacion` TEXT)
+begin
+update sub_actividad set idActividad=id_Actividad,nombre=nombre,descripcion=descripcion,fecha_monitoreo=fecha_monitoreo,id_Encargado=id_Encargado,ponderacion=ponderacion,costo=costo,observacion=observacion
+where sub_actividad.id_sub_Actividad=id_sub_Act;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_modificar_sub_actividades_realizadas`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_modificar_sub_actividades_realizadas`(in id_subActividadRealizada int,IN id_SubActividad INT, IN fecha_Realizacion DATE, IN observacion TEXT)
+begin
+update sub_actividades_realizadas set id_SubActividad=id_SubActividad,fecha_Realizacion=fecha_Realizacion,observacion=observacion 
+where sub_actividades_Realizadas.id_subActividadRealizada=id_subActividadRealizada;
+end$$
+
+DROP PROCEDURE IF EXISTS `pa_modificar_tipo_area`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `pa_modificar_tipo_area`(IN id_Tipo_Area int,IN nombre VARCHAR(30), IN observaciones TEXT)
+begin
+	 update tipo_area set nombre=nombre,observaciones=observaciones where tipo_area.id_Tipo_Area=id_Tipo_Area;
+end$$
+
+DROP PROCEDURE IF EXISTS `PL_POA_MANTENIMIENTO_ELIMINAR_AREA`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `PL_POA_MANTENIMIENTO_ELIMINAR_AREA`(IN `id_` INT(11), OUT `message_` VARCHAR(150), OUT `Tmessage_` TINYINT)
+    NO SQL
+BEGIN START TRANSACTION; IF NOT EXISTS (
+	SELECT 
+		1 
+	FROM 
+		objetivos_institucionales 
+	WHERE 
+		objetivos_institucionales.id_Area = id_
+) THEN 
+delete from 
+	area 
+where 
+	area.id_Area = id_; 
+SET 
+	message_ = "La área ha sido eliminada exitósamente."; 
+SET 
+	Tmessage_ = 1; ELSE 
+SET 
+	message_ = "No se puede eliminar la área, se encuentra asociada con un objetivo institucional."; 
+SET 
+	Tmessage_ = 0; END IF; COMMIT; END$$
+
+DROP PROCEDURE IF EXISTS `PL_POA_MANTENIMIENTO_INSERTAR_NUEVA_AREA`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `PL_POA_MANTENIMIENTO_INSERTAR_NUEVA_AREA`(IN `name_` TEXT, IN `typeOfArea_` INT(11), IN `observation_` TEXT, OUT `message_` VARCHAR(150), OUT `Tmessage_` TINYINT)
+    MODIFIES SQL DATA
+    SQL SECURITY INVOKER
+BEGIN START TRANSACTION; IF NOT EXISTS (
+	SELECT 
+		1 
+	FROM 
+		area 
+	WHERE 
+		area.nombre = name_ 
+		AND area.id_tipo_area = typeOfArea_
+) THEN INSERT INTO area (
+	area.nombre, area.id_tipo_area, area.observacion
+) 
+VALUES 
+	(name_, typeOfArea_, observation_); 
+SET 
+	message_ = "La nueva área ha sido ingresada exitósamente."; 
+SET 
+	Tmessage_ = 1; ELSE 
+SET 
+	message_ = "La área que quiere ingresar ya existe."; 
+SET 
+	Tmessage_ = 0; END IF; COMMIT; END$$
+
+DROP PROCEDURE IF EXISTS `PL_POA_MANTENIMIENTO_MODIFICAR_AREA`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `PL_POA_MANTENIMIENTO_MODIFICAR_AREA`(IN `name_` TEXT, IN `typeOfArea_` INT(11), IN `observation_` TEXT, OUT `message_` VARCHAR(150), OUT `Tmessage_` TINYINT, IN `id_` INT(11))
+    MODIFIES SQL DATA
+    SQL SECURITY INVOKER
+BEGIN START TRANSACTION; IF NOT EXISTS (
+	SELECT 
+		1 
+	FROM 
+		area 
+	WHERE 
+		area.nombre = name_ 
+		AND area.id_tipo_area = typeOfArea_
+) THEN 
+update 
+	area 
+set 
+	area.nombre = name_, 
+	area.id_tipo_area = typeOfArea_, 
+	area.observacion = observation_ 
+where 
+	area.id_Area = id_; 
+SET 
+	message_ = "La área ha sido modificada exitósamente."; 
+SET 
+	Tmessage_ = 1; ELSE 
+SET 
+	message_ = "La modificación es inválida, ya existen esos valores."; 
+SET 
+	Tmessage_ = 0; END IF; COMMIT; END$$
+
+DROP PROCEDURE IF EXISTS `sp_actualizar_asignado_folio`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_actualizar_asignado_folio`(
+    IN numFolio_ VARCHAR(25), 
+    IN usuarioAsg INT, 
+    OUT `mensaje` VARCHAR(150), 
+    OUT `codMensaje` TINYINT)
+BEGIN 
+ 
+   DECLARE id INTEGER DEFAULT 0;
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+
+   START TRANSACTION;
+   
+   UPDATE seguimiento SET UsuarioAsignado = usuarioAsg WHERE NroFolio = numFolio_;
+
+     SET mensaje = "El usuario ha sido asignado correctamente al seguimiento de este folio."; 
+     SET codMensaje = 1; 
+   
+   COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_actualizar_categorias_folios`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_actualizar_categorias_folios`(IN `Id_categoria_` INT(11), IN `NombreCategoria_` TEXT, IN `DescripcionCategoria_` TEXT, OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+ROLLBACK;
+SET mensaje = "No se pudo actualizar la categoria de los folios por favor revise los datos que desea modificar";
+		SET codMensaje = 0; 
+END;
+
+   START TRANSACTION;
+        UPDATE categorias_folios
+        SET  NombreCategoria=NombreCategoria_,DescripcionCategoria = DescripcionCategoria_ 
+        WHERE Id_categoria=Id_categoria_;
+		
+		SET mensaje = "la categoria de los folios se ha actualizado satisfactoriamente."; 
+		SET codMensaje = 1;               
+COMMIT;   
+end$$
+
+DROP PROCEDURE IF EXISTS `SP_ACTUALIZAR_CIUDAD`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ACTUALIZAR_CIUDAD`(
+IN `pcnombre` VARCHAR(50), -- nuevo nombre que se le quiere poner a la ciudad
+IN `pcCodigo` INT, -- codigo de la ciudad que queremos modificar
+OUT `mensajeError` VARCHAR(500)
+)
+BEGIN 
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+ROLLBACK;
+SET mensajeError = "No se pudo actualizar la ciudad, por favor revise los datos que desea modificar";
+END;
+
+   START TRANSACTION;
+        UPDATE sa_ciudades
+        SET  sa_ciudades.nombre=pcnombre
+        where sa_ciudades.codigo = pcCodigo;
+
+		SET mensajeError = "La ciudad se ha actualizado satisfactoriamente."; 
+               
+COMMIT;   
+end$$
+
+DROP PROCEDURE IF EXISTS `sp_actualizar_estado_seguimiento`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_actualizar_estado_seguimiento`(IN `Id_Estado_Seguimiento_` TINYINT(4), IN `DescripcionEstadoSeguimiento_` TEXT, OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+ROLLBACK;
+SET mensaje = "No se pudo actualizar el estado por favor revise los datos que desea modificar";
+		SET codMensaje = 0; 
+END;
+
+   START TRANSACTION;
+        UPDATE estado_seguimiento
+        SET  DescripcionEstadoSeguimiento=DescripcionEstadoSeguimiento_
+        where Id_Estado_Seguimiento = Id_Estado_Seguimiento_;
+		SET mensaje = "el estado se ha actualizado satisfactoriamente."; 
+		SET codMensaje = 1;                  
+COMMIT;   
+end$$
+
+DROP PROCEDURE IF EXISTS `sp_actualizar_folio`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_actualizar_folio`( 
+    IN numFolioAnt_ VARCHAR(25),
+    IN numFolio_ VARCHAR(25), 
+	IN fechaCreacion_ DATE, 
+	IN fechaEntrada_ DATE, 
+	IN personaReferente_ TEXT, 
+	IN unidadAcademica_ INT, 
+	IN organizacion_ INT, 
+	IN descripcion_ TEXT,
+	IN tipoFolio_ TINYINT, 
+	IN ubicacionFisica_ INT(5), 
+    IN prioridadAnt_ TINYINT,
+	IN prioridad_ TINYINT,
+    IN categoria_ INT,
+    OUT mensaje VARCHAR(150), 
+    OUT codMensaje TINYINT  
+)
+BEGIN 
+
+   START TRANSACTION;
+
+   IF (numFolioAnt_ = numFolio_) THEN
+       UPDATE folios SET  FechaCreacion = fechaCreacion_, personaReferente = PersonaReferente_, UnidadAcademica = unidadAcademica_, Organizacion = organizacion_, DescripcionAsunto = descripcion_, TipoFolio = tipoFolio_, UbicacionFisica = ubicacionFisica_, Prioridad = prioridad_, categoria=categoria_ WHERE NroFolio = numFolio_;
+       IF (prioridadAnt_ != prioridad_) THEN
+          INSERT INTO prioridad_folio VALUES (NULL,numFolio_,prioridad_,CURDATE() );
+       END IF;
+	   SET mensaje = "Los datos del folio ha sido actualizados satisfactoriamente."; 
+       SET codMensaje = 1; 
+   ELSE 
+       IF EXISTS ( SELECT 1 FROM folios WHERE NroFolio = numFolio_ ) THEN
+	      SET mensaje = "El folio ya existe en sistema, por favor revise el numero del folio que desea ingresar";
+          SET codMensaje = 0;
+	   ELSE
+	      UPDATE folios SET NroFolio = numFolio_, FechaCreacion = fechaCreacion_, PersonaReferente = personaReferente_, UnidadAcademica = unidadAcademica_, Organizacion = organizacion_, 
+		  DescripcionAsunto = descripcion_,TipoFolio = tipoFolio_, UbicacionFisica = ubicacionFisica_, Prioridad = prioridad_, categoria=categoria_ WHERE NroFolio = numFolioAnt_;
+		
+       IF (prioridadAnt_ != prioridad_) THEN
+         INSERT INTO prioridad_folio VALUES (NULL,numFolio_,prioridad_,CURDATE() );
+       END IF;		
+			
+		  SET mensaje = "Los datos del folio han sido actualizados satisfactoriamente."; 
+          SET codMensaje = 1;  
+	   END IF;
+   END IF;
+   
+   COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_ACTUALIZAR_MENCION_HONORIFICA`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ACTUALIZAR_MENCION_HONORIFICA`(
+IN `pcnombre` VARCHAR(50), -- nuevo nombre que se le quiere poner a la mencion
+IN `pcCodigo` INT, -- codigo de la mencion que queremos modificar
+OUT `mensajeError` VARCHAR(500)
+)
+BEGIN 
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+ROLLBACK;
+SET mensajeError = "No se pudo actualizar la ciudad, por favor revise los datos que desea modificar";
+END;
+
+   START TRANSACTION;
+        UPDATE sa_menciones_honorificas
+        SET  sa_menciones_honorificas.descripcion=pcnombre
+        where sa_menciones_honorificas.codigo = pcCodigo;
+
+		SET mensajeError = "La mencion honorifica se ha actualizado satisfactoriamente."; 
+               
+COMMIT;   
+end$$
+
+DROP PROCEDURE IF EXISTS `sp_actualizar_organizacion`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_actualizar_organizacion`(IN `Id_Organizacion_` INT(11), IN `NombreOrganizacion_` TEXT, IN `Ubicacion_` TEXT, OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+ROLLBACK;
+SET mensaje = "No se pudo actualizar la organizacion por favor revise los datos que desea modificar";
+		SET codMensaje = 0; 
+END;
+
+   START TRANSACTION;
+        UPDATE organizacion
+        SET  NombreOrganizacion=NombreOrganizacion_,Ubicacion = Ubicacion_ 
+        WHERE Id_Organizacion=Id_Organizacion_;
+		
+		SET mensaje = "la organizacion se ha actualizado satisfactoriamente."; 
+		SET codMensaje = 1;               
+COMMIT;   
+end$$
+
+DROP PROCEDURE IF EXISTS `SP_ACTUALIZAR_ORIENTACION`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ACTUALIZAR_ORIENTACION`(
+IN `pcnombre` VARCHAR(50), -- nuevo nombre que se le quiere poner a la orientacion
+IN `pcCodigo` INT, -- codigo de la ciudad que queremos modificar
+OUT `mensajeError` VARCHAR(500)
+)
+BEGIN 
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+ROLLBACK;
+SET mensajeError = "No se pudo actualizar la orientacion, por favor revise los datos que desea modificar";
+END;
+
+   START TRANSACTION;
+        UPDATE sa_orientaciones
+        SET  sa_orientaciones.descripcion=pcnombre
+        where sa_orientaciones.codigo = pcCodigo;
+
+		SET mensajeError = "La Orientacion se ha actualizado satisfactoriamente."; 
+               
+COMMIT;   
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_ACTUALIZAR_ORIENTACIONES`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ACTUALIZAR_ORIENTACIONES`(
+IN `pcnombre` VARCHAR(50), -- nuevo nombre que se le quiere poner a la orientacion
+IN `pcCodigo` INT, -- codigo de la ciudad que queremos modificar
+OUT `mensajeError` VARCHAR(500)
+)
+BEGIN 
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+ROLLBACK;
+SET mensajeError = "No se pudo actualizar la orientacion, por favor revise los datos que desea modificar";
+END;
+
+   START TRANSACTION;
+        UPDATE sa_orientaciones
+        SET  sa_orientaciones.descripcion=pcnombre
+        where sa_orientaciones.codigo = pcCodigo;
+               
+COMMIT;   
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_ACTUALIZAR_PERIODO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ACTUALIZAR_PERIODO`(
+IN `pcnombre` VARCHAR(50), -- nuevo nombre que se le quiere poner al periodo
+IN `pcCodigo` INT, -- codigo del periodo que queremos modificar
+OUT `mensajeError` VARCHAR(500)
+)
+BEGIN 
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+ROLLBACK;
+SET mensajeError = "No se pudo actualizar la ciudad, por favor revise los datos que desea modificar";
+END;
+
+   START TRANSACTION;
+        UPDATE sa_periodos
+        SET  sa_periodos.nombre=pcnombre
+        where sa_periodos.codigo = pcCodigo;
+
+		SET mensajeError = "El periodo se ha actualizado satisfactoriamente."; 
+               
+COMMIT;   
+end$$
+
+DROP PROCEDURE IF EXISTS `SP_ACTUALIZAR_PERMISO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ACTUALIZAR_PERMISO`(
+IN `pcnombre` VARCHAR(50), -- nuevo nombre que se le quiere poner al periodo
+IN `pcCodigo` INT, -- codigo del periodo que queremos modificar
+OUT `mensajeError` VARCHAR(500)
+)
+BEGIN 
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+ROLLBACK;
+SET mensajeError = "No se pudo actualizar el permiso, por favor revise los datos que desea modificar";
+END;
+
+   START TRANSACTION;
+        UPDATE tipodepermiso
+        SET  tipodepermiso.tipo_permiso = pcnombre
+        where tipodepermiso.id_tipo_permiso = pcCodigo;
+
+    SET mensajeError = "El Permiso se ha actualizado satisfactoriamente."; 
+               
+COMMIT;   
+end$$
+
+DROP PROCEDURE IF EXISTS `SP_ACTUALIZAR_PLAN_ESTUDIO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ACTUALIZAR_PLAN_ESTUDIO`(
+IN pcnombre VARCHAR(50), -- nuevo nombre que se le quiere poner al plan de estudio
+IN pcCodigo INT, -- codigo del plan que queremos modificar
+OUT `mensajeError` VARCHAR(500)
+)
+BEGIN 
+	DECLARE mensaje VARCHAR(500);
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+ROLLBACK;
+SET mensaje = "No se pudo actualizar el Plan de estudio, por favor revise los datos que desea modificar";
+END;
+
+   START TRANSACTION;
+        UPDATE sa_planes_estudio
+        SET  nombre=pcnombre
+        where codigo = pcCodigo;
+
+		SET mensaje = "El plan de estudio se ha actualizado satisfactoriamente."; 
+               
+COMMIT;   
+end$$
+
+DROP PROCEDURE IF EXISTS `sp_actualizar_prioridad`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_actualizar_prioridad`(IN `Id_Prioridad_` TINYINT(4), IN `DescripcionPrioridad_` TEXT, OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+ROLLBACK;
+SET mensaje = "No se pudo actualizar la prioridad por favor revise los datos que desea modificar";
+		SET codMensaje = 0; 
+END;
+
+   START TRANSACTION;
+        UPDATE prioridad
+        SET  DescripcionPrioridad=DescripcionPrioridad_
+        where Id_Prioridad = Id_Prioridad_;
+		
+		SET mensaje = "la prioridad se ha actualizado satisfactoriamente."; 
+		SET codMensaje = 1;               
+COMMIT;   
+end$$
+
+DROP PROCEDURE IF EXISTS `sp_actualizar_seguimiento`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_actualizar_seguimiento`(IN `numFolio_` VARCHAR(25), IN `fechaFin_` DATE, IN `prioridad_` TINYINT, IN `seguimiento_` TINYINT, IN `notas_` TEXT, OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT, IN `us` INT)
+BEGIN 
+ 
+   DECLARE id INTEGER DEFAULT 0;
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+
+   START TRANSACTION;
+   
+   IF NOT EXISTS (SELECT 1 FROM folios WHERE NroFolio = numFolio_) THEN 
+	 SET mensaje = "El folio no existe en sistema, por favor notifiquelo al administrador del sistema";
+     SET codMensaje = 0;	 
+   ELSE
+     SET id = (SELECT Id_Seguimiento FROM seguimiento WHERE NroFolio = numFolio_);
+     
+	 IF( IFNULL(fechaFin_,0) = 0 ) THEN
+       UPDATE seguimiento SET Notas = notas_, Prioridad = prioridad_, EstadoSeguimiento = seguimiento_ WHERE NroFolio = numFolio_;
+	 ELSE
+	   UPDATE seguimiento SET Notas = notas_, Prioridad = prioridad_, FechaFinal = fechaFin_, EstadoSeguimiento = seguimiento_ WHERE NroFolio = numFolio_;
+       UPDATE alerta SET Atendido=1 WHERE NroFolioGenera = numFolio_;
+	 END IF;
+	 
+     INSERT INTO seguimiento_historico VALUES(NULL,id,seguimiento_,notas_,prioridad_,NOW(),us);
+
+     SET mensaje = "El seguimiento ha sido actualizado satisfactoriamente."; 
+     SET codMensaje = 1; 
+   END IF; 
+   
+   COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_ACTUALIZAR_TIPO_DE_ESTUDIANTE`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ACTUALIZAR_TIPO_DE_ESTUDIANTE`(
+IN `pcnombre` VARCHAR(50), -- Nuevo nombre que se le quiere dar al tipo de estudiante
+IN `pcCodigo` INT, -- codigo del tipo de estudiante que queremos modificar
+OUT `mensajeError` VARCHAR(500)
+)
+BEGIN 
+
+DECLARE errror VARCHAR(500);
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+
+
+ROLLBACK;
+
+SET mensajeError = "No se pudo actualizar el tipo de estudiante, por favor revise los datos que desea modificar";
+END;
+
+   START TRANSACTION;
+        UPDATE sa_tipos_estudiante
+        SET  sa_tipos_estudiante.descripcion=pcnombre
+        where sa_tipos_estudiante.codigo = pcCodigo;
+
+		SET mensajeError = "El tipo de estudiante se ha actualizado satisfactoriamente."; 
+               
+COMMIT;   
+end$$
+
+DROP PROCEDURE IF EXISTS `sp_actualizar_ubicacion_archivo_fisica`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_actualizar_ubicacion_archivo_fisica`(IN `Id_UbicacionArchivoFisico_` INT(5), IN `DescripcionUbicacionFisica_` TEXT, IN `Capacidad_` INT(10), IN `TotalIngresados_` INT(10), IN `HabilitadoParaAlmacenar_` TINYINT(1), OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+ROLLBACK;
+SET mensaje = "No se pudo actualizar la ubicacion fisica por favor revise los datos que desea modificar";
+		SET codMensaje = 0; 
+END;
+
+   START TRANSACTION;
+
+        UPDATE ubicacion_archivofisico
+        SET  DescripcionUbicacionFisica=DescripcionUbicacionFisica_,Capacidad=Capacidad_,     TotalIngresados=TotalIngresados_,HabilitadoParaAlmacenar=HabilitadoParaAlmacenar_  where Id_UbicacionArchivoFisico = Id_UbicacionArchivoFisico_;
+		
+		SET mensaje = "la ubicacion se ha actualizado satisfactoriamente."; 
+		SET codMensaje = 1;               
+COMMIT;  
+end$$
+
+DROP PROCEDURE IF EXISTS `sp_actualizar_ubicacion_notificaciones`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_actualizar_ubicacion_notificaciones`(IN `Id_UbicacionNotificaciones_` TINYINT(4), IN `DescripcionUbicacionNotificaciones_` TEXT, OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+ROLLBACK;
+SET mensaje = "No se pudo actualizar la ubicacion de las notificaciones por favor revise los datos que desea modificar";
+		SET codMensaje = 0; 
+END;
+
+   START TRANSACTION;
+        UPDATE ubicacion_notificaciones
+        SET  DescripcionUbicacionNotificaciones=DescripcionUbicacionNotificaciones_
+        where Id_UbicacionNotificaciones = Id_UbicacionNotificaciones_;
+		
+		SET mensaje = "la ubicacion se ha actualizado satisfactoriamente."; 
+		SET codMensaje = 1;               
+COMMIT;   
+end$$
+
+DROP PROCEDURE IF EXISTS `sp_actualizar_unidad_academica`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_actualizar_unidad_academica`(IN `Id_UnidadAcademica_` INT(11), IN `NombreUnidadAcademica_` TEXT, IN `UbicacionUnidadAcademica_` TEXT, OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN
+ROLLBACK;
+SET mensaje = "No se pudo actualizar la unidad academica por favor revise los datos que desea modificar";
+		SET codMensaje = 0; 
+END;
+
+   START TRANSACTION;
+        UPDATE unidad_academica
+        SET  NombreUnidadAcademica=NombreUnidadAcademica_,UbicacionUnidadAcademica=UbicacionUnidadAcademica_
+        where  Id_UnidadAcademica = Id_UnidadAcademica_;
+		SET mensaje = "la unidad academica se ha actualizado satisfactoriamente."; 
+		SET codMensaje = 1;               
+COMMIT;   
+end$$
+
+DROP PROCEDURE IF EXISTS `sp_actualizar_usuario`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_actualizar_usuario`(IN `idUsuario` INT(11), IN `numEmpleado_` VARCHAR(13), IN `nombreAnt_` VARCHAR(30), IN `nombre_` VARCHAR(30), IN `Password_` VARCHAR(20), IN `rol_` INT(4), IN `fecha_` DATE, IN `estado_` BOOLEAN, OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+   START TRANSACTION;
+   IF (nombreAnt_ = nombre_) THEN 
+     UPDATE usuario SET No_Empleado = numEmpleado_, nombre = nombre_, Password = udf_Encrypt_derecho(Password_), Id_Rol = rol_, Fecha_Alta = fecha_, Estado = estado_ 
+     WHERE id_Usuario = idUsuario;
+     
+     SET mensaje = "El usuario ha sido modificado satisfactoriamente."; 
+       SET codMensaje = 1; 
+   ELSE
+   
+     IF NOT EXISTS (SELECT 1 FROM usuario WHERE nombre = nombre_) THEN 
+
+       UPDATE usuario SET No_Empleado = numEmpleado_, nombre = nombre_, Password = udf_Encrypt_derecho(Password_), Id_Rol = rol_, Fecha_Alta = fecha_, Estado = estado_ 
+       WHERE id_Usuario = idUsuario;
+
+       SET mensaje = "El usuario ha sido modificado satisfactoriamente."; 
+       SET codMensaje = 1;  
+     ELSE
+       SET mensaje = "El usuario ya existe en sistema, por favor revise el nombre del usuario que desea modificar";
+       SET codMensaje = 0;
+     END IF;
+   END IF;
+   
+   COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_BUSQUEDA_SECRETARIA`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_BUSQUEDA_SECRETARIA`(
+	IN pcNumeroIdentidad VARCHAR(500),
+    IN pdFechaSolicitud DATE, 
+    IN pnCodigoTipoSolicitud INT,
+	OUT pcMensajeError VARCHAR(500) -- Para mensajes de error
+)
+BEGIN
+	
+    DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no con	trolados
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError, ' Server: ');
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+    
+    IF pcNumeroIdentidad IS  NULL AND pdFechaSolicitud IS NULL AND  pnCodigoTipoSolicitud IS NULL THEN
+
+	SELECT
+		PERSONA.*, ESTUDIANTE.no_cuenta AS NUMERO_CUENTA, ESTUDIANTE.indice_academico AS INDICE_ACADEMICO, 
+        TIPO_ESTUDIANTE.descripcion AS DESCRIPCION_TIPO_ESTUDIANTE,
+        TIPOS_SOLICITUDES.nombre as NOMBRE_TIPO_SOLICITUD, SOLICITUDES.fecha_solicitud AS FECHA_SOLICITUD 
+	FROM
+		(
+			SELECT CONCAT(Primer_nombre,' ', Primer_apellido) AS NOMBRE,
+            N_identidad AS NUMERO_IDENTIDAD
+            FROM persona AS PERSONA
+        )
+        PERSONA INNER JOIN sa_estudiantes  as ESTUDIANTE ON(ESTUDIANTE.dni = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_solicitudes AS SOLICITUDES ON(SOLICITUDES.dni_estudiante = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_tipos_solicitud AS TIPOS_SOLICITUDES ON(TIPOS_SOLICITUDES.codigo = SOLICITUDES.cod_tipo_solicitud)
+        INNER JOIN sa_estudiantes_tipos_estudiantes AS TIPOS_ESTUDIANTE_ESTUDIANTE 
+        ON(TIPOS_ESTUDIANTE_ESTUDIANTE.dni_estudiante = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_tipos_estudiante AS TIPO_ESTUDIANTE ON(TIPO_ESTUDIANTE.codigo = TIPOS_ESTUDIANTE_ESTUDIANTE.codigo_tipo_estudiante);  
+        
+	END IF;
+    
+    -- Buscar por número de identidad
+    IF pcNumeroIdentidad IS  NOT NULL AND pdFechaSolicitud IS NULL AND  pnCodigoTipoSolicitud IS NULL THEN
+    
+	SELECT
+		PERSONA.*, ESTUDIANTE.no_cuenta AS NUMERO_CUENTA, ESTUDIANTE.indice_academico AS INDICE_ACADEMICO, 
+        TIPO_ESTUDIANTE.descripcion AS DESCRIPCION_TIPO_ESTUDIANTE,
+        TIPOS_SOLICITUDES.nombre as NOMBRE_TIPO_SOLICITUD, SOLICITUDES.fecha_solicitud AS FECHA_SOLICITUD 
+	FROM
+		(
+			SELECT CONCAT(Primer_nombre,' ', Primer_apellido) AS NOMBRE,
+            N_identidad AS NUMERO_IDENTIDAD
+            FROM persona AS PERSONA
+			WHERE
+			(
+				pcNumeroIdentidad IS NOT NULL 
+				AND N_identidad = pcNumeroIdentidad
+			)
+        )
+        PERSONA INNER JOIN sa_estudiantes  as ESTUDIANTE ON(ESTUDIANTE.dni = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_solicitudes AS SOLICITUDES ON(SOLICITUDES.dni_estudiante = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_tipos_solicitud AS TIPOS_SOLICITUDES ON(TIPOS_SOLICITUDES.codigo = SOLICITUDES.cod_tipo_solicitud)
+        INNER JOIN sa_estudiantes_tipos_estudiantes AS TIPOS_ESTUDIANTE_ESTUDIANTE 
+        ON(TIPOS_ESTUDIANTE_ESTUDIANTE.dni_estudiante = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_tipos_estudiante AS TIPO_ESTUDIANTE ON(TIPO_ESTUDIANTE.codigo = TIPOS_ESTUDIANTE_ESTUDIANTE.codigo_tipo_estudiante);    
+        
+	-- Buscar por número de identidad y fecha de solicitud
+	ELSEIF pcNumeroIdentidad IS  NOT NULL AND pdFechaSolicitud IS NOT NULL AND  pnCodigoTipoSolicitud IS NULL THEN
+    
+	SELECT
+		PERSONA.*, ESTUDIANTE.no_cuenta AS NUMERO_CUENTA, ESTUDIANTE.indice_academico AS INDICE_ACADEMICO, 
+        TIPO_ESTUDIANTE.descripcion AS DESCRIPCION_TIPO_ESTUDIANTE,
+        TIPOS_SOLICITUDES.nombre as NOMBRE_TIPO_SOLICITUD, SOLICITUDES.fecha_solicitud AS FECHA_SOLICITUD 
+	FROM
+		(
+			SELECT CONCAT(Primer_nombre,' ', Primer_apellido) AS NOMBRE,
+            N_identidad AS NUMERO_IDENTIDAD
+            FROM persona AS PERSONA
+			WHERE
+			(
+				pcNumeroIdentidad IS NOT NULL 
+				AND N_identidad = pcNumeroIdentidad
+			)
+            AND
+            (            
+                pdFechaSolicitud IS NOT NULL
+				AND N_identidad IN
+                (
+					SELECT dni_estudiante
+                    FROM sa_solicitudes
+                    WHERE fecha_solicitud  = pdFechaSolicitud
+                )
+            )
+        )PERSONA INNER JOIN sa_estudiantes  as ESTUDIANTE ON(ESTUDIANTE.dni = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_solicitudes AS SOLICITUDES ON(SOLICITUDES.dni_estudiante = PERSONA.NUMERO_IDENTIDAD AND SOLICITUDES.fecha_solicitud = pdFechaSolicitud)
+        INNER JOIN sa_tipos_solicitud AS TIPOS_SOLICITUDES ON(TIPOS_SOLICITUDES.codigo = SOLICITUDES.cod_tipo_solicitud)
+        INNER JOIN sa_estudiantes_tipos_estudiantes AS TIPOS_ESTUDIANTE_ESTUDIANTE 
+        ON(TIPOS_ESTUDIANTE_ESTUDIANTE.dni_estudiante = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_tipos_estudiante AS TIPO_ESTUDIANTE ON(TIPO_ESTUDIANTE.codigo = TIPOS_ESTUDIANTE_ESTUDIANTE.codigo_tipo_estudiante);  
+        
+	-- Buscar por número de identidad, fecha de solicitud y tipo de solicitud
+	ELSEIF pcNumeroIdentidad IS  NOT NULL AND pdFechaSolicitud IS NOT NULL AND  pnCodigoTipoSolicitud IS NOT NULL THEN
+    
+        
+	SELECT
+		PERSONA.*, ESTUDIANTE.no_cuenta AS NUMERO_CUENTA, ESTUDIANTE.indice_academico AS INDICE_ACADEMICO, 
+        TIPO_ESTUDIANTE.descripcion AS DESCRIPCION_TIPO_ESTUDIANTE,
+        TIPOS_SOLICITUDES.nombre as NOMBRE_TIPO_SOLICITUD, SOLICITUDES.fecha_solicitud AS FECHA_SOLICITUD 
+	FROM
+		(
+			SELECT CONCAT(Primer_nombre,' ', Primer_apellido) AS NOMBRE,
+            N_identidad AS NUMERO_IDENTIDAD
+            FROM persona AS PERSONA
+			WHERE
+			(
+				pcNumeroIdentidad IS NOT NULL 
+				AND N_identidad = pcNumeroIdentidad
+			)
+            AND
+            (
+				pcNumeroIdentidad IS NOT NULL 
+				AND N_identidad = pcNumeroIdentidad            
+                AND pdFechaSolicitud IS NOT NULL
+				AND N_identidad IN
+                (
+					SELECT dni_estudiante
+                    FROM sa_solicitudes
+                    WHERE fecha_solicitud  = pdFechaSolicitud
+                )
+            )
+            AND
+            (
+				pnCodigoTipoSolicitud IS NOT NULL
+                AND N_identidad IN
+                (
+					SELECT dni_estudiante
+                    FROM sa_solicitudes
+                    WHERE fecha_solicitud  = pdFechaSolicitud
+                    AND sa_solicitudes.cod_tipo_solicitud = pnCodigoTipoSolicitud
+                )            
+            )            
+        )PERSONA INNER JOIN sa_estudiantes  as ESTUDIANTE ON(ESTUDIANTE.dni = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_solicitudes AS SOLICITUDES ON(SOLICITUDES.dni_estudiante = PERSONA.NUMERO_IDENTIDAD AND SOLICITUDES.fecha_solicitud = pdFechaSolicitud)
+        INNER JOIN sa_tipos_solicitud AS TIPOS_SOLICITUDES ON(TIPOS_SOLICITUDES.codigo = SOLICITUDES.cod_tipo_solicitud)
+        INNER JOIN sa_estudiantes_tipos_estudiantes AS TIPOS_ESTUDIANTE_ESTUDIANTE 
+        ON(TIPOS_ESTUDIANTE_ESTUDIANTE.dni_estudiante = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_tipos_estudiante AS TIPO_ESTUDIANTE ON(TIPO_ESTUDIANTE.codigo = TIPOS_ESTUDIANTE_ESTUDIANTE.codigo_tipo_estudiante); 
+        
+	-- Buscar por fecha de solicitud
+	ELSEIF pcNumeroIdentidad IS NULL AND pdFechaSolicitud IS NOT NULL AND  pnCodigoTipoSolicitud IS NULL THEN
+    
+	SELECT
+		PERSONA.*, ESTUDIANTE.no_cuenta AS NUMERO_CUENTA, ESTUDIANTE.indice_academico AS INDICE_ACADEMICO, 
+        TIPO_ESTUDIANTE.descripcion AS DESCRIPCION_TIPO_ESTUDIANTE,
+        TIPOS_SOLICITUDES.nombre as NOMBRE_TIPO_SOLICITUD, SOLICITUDES.fecha_solicitud AS FECHA_SOLICITUD 
+	FROM
+		(
+			SELECT CONCAT(Primer_nombre,' ', Primer_apellido) AS NOMBRE,
+            N_identidad AS NUMERO_IDENTIDAD
+            FROM persona
+			WHERE
+            (
+				N_identidad IN
+                (
+					SELECT dni_estudiante
+                    FROM sa_solicitudes
+                    WHERE fecha_solicitud  = pdFechaSolicitud
+                )
+            )        
+        )PERSONA INNER JOIN sa_estudiantes  as ESTUDIANTE ON(ESTUDIANTE.dni = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_solicitudes AS SOLICITUDES ON(SOLICITUDES.dni_estudiante = PERSONA.NUMERO_IDENTIDAD AND SOLICITUDES.fecha_solicitud = pdFechaSolicitud)
+        INNER JOIN sa_tipos_solicitud AS TIPOS_SOLICITUDES ON(TIPOS_SOLICITUDES.codigo = SOLICITUDES.cod_tipo_solicitud)
+        INNER JOIN sa_estudiantes_tipos_estudiantes AS TIPOS_ESTUDIANTE_ESTUDIANTE 
+        ON(TIPOS_ESTUDIANTE_ESTUDIANTE.dni_estudiante = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_tipos_estudiante AS TIPO_ESTUDIANTE ON(TIPO_ESTUDIANTE.codigo = TIPOS_ESTUDIANTE_ESTUDIANTE.codigo_tipo_estudiante);     
+        
+	        
+	-- Buscar por fecha de solicitud y tipo de solicitud
+	ELSEIF pcNumeroIdentidad IS NULL AND pdFechaSolicitud IS NOT NULL AND  pnCodigoTipoSolicitud IS NOT NULL THEN
+    
+	SELECT
+		PERSONA.*, ESTUDIANTE.no_cuenta AS NUMERO_CUENTA, ESTUDIANTE.indice_academico AS INDICE_ACADEMICO, 
+        TIPO_ESTUDIANTE.descripcion AS DESCRIPCION_TIPO_ESTUDIANTE,
+        TIPOS_SOLICITUDES.nombre as NOMBRE_TIPO_SOLICITUD, SOLICITUDES.fecha_solicitud AS FECHA_SOLICITUD 
+	FROM
+		(
+			SELECT CONCAT(Primer_nombre,' ', Primer_apellido) AS NOMBRE,
+            N_identidad AS NUMERO_IDENTIDAD
+            FROM persona AS PERSONA
+			WHERE
+            (       
+				N_identidad IN
+                (
+					SELECT dni_estudiante
+                    FROM sa_solicitudes
+                    WHERE fecha_solicitud  = pdFechaSolicitud
+                )
+            )
+            AND
+            (
+                N_identidad IN
+                (
+					SELECT dni_estudiante
+                    FROM sa_solicitudes
+                    WHERE sa_solicitudes.cod_tipo_solicitud = pnCodigoTipoSolicitud
+                )            
+            )            
+        )PERSONA INNER JOIN sa_estudiantes  as ESTUDIANTE ON(ESTUDIANTE.dni = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_solicitudes AS SOLICITUDES ON(SOLICITUDES.dni_estudiante = PERSONA.NUMERO_IDENTIDAD AND SOLICITUDES.fecha_solicitud = pdFechaSolicitud)
+        INNER JOIN sa_tipos_solicitud AS TIPOS_SOLICITUDES ON(TIPOS_SOLICITUDES.codigo = SOLICITUDES.cod_tipo_solicitud)
+        INNER JOIN sa_estudiantes_tipos_estudiantes AS TIPOS_ESTUDIANTE_ESTUDIANTE 
+        ON(TIPOS_ESTUDIANTE_ESTUDIANTE.dni_estudiante = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_tipos_estudiante AS TIPO_ESTUDIANTE ON(TIPO_ESTUDIANTE.codigo = TIPOS_ESTUDIANTE_ESTUDIANTE.codigo_tipo_estudiante);     
+        
+		        
+	-- Buscar por tipo de solicitud
+	ELSEIF pcNumeroIdentidad IS NULL AND pdFechaSolicitud IS NULL AND  pnCodigoTipoSolicitud IS NOT NULL THEN
+    
+        
+	SELECT
+		PERSONA.*, ESTUDIANTE.no_cuenta AS NUMERO_CUENTA, ESTUDIANTE.indice_academico AS INDICE_ACADEMICO, 
+        TIPO_ESTUDIANTE.descripcion AS DESCRIPCION_TIPO_ESTUDIANTE,
+        TIPOS_SOLICITUDES.nombre as NOMBRE_TIPO_SOLICITUD, SOLICITUDES.fecha_solicitud AS FECHA_SOLICITUD 
+	FROM
+		(
+			SELECT CONCAT(Primer_nombre,' ', Primer_apellido) AS NOMBRE,
+            N_identidad AS NUMERO_IDENTIDAD
+            FROM persona AS PERSONA
+			WHERE
+            (
+				pnCodigoTipoSolicitud IS NOT NULL
+                AND N_identidad IN
+                (
+					SELECT dni_estudiante
+                    FROM sa_solicitudes
+                    WHERE sa_solicitudes.cod_tipo_solicitud = pnCodigoTipoSolicitud
+                )            
+            )            
+        )PERSONA INNER JOIN sa_estudiantes  as ESTUDIANTE ON(ESTUDIANTE.dni = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_solicitudes AS SOLICITUDES ON(SOLICITUDES.dni_estudiante = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_tipos_solicitud AS TIPOS_SOLICITUDES ON(TIPOS_SOLICITUDES.codigo = SOLICITUDES.cod_tipo_solicitud)
+        INNER JOIN sa_estudiantes_tipos_estudiantes AS TIPOS_ESTUDIANTE_ESTUDIANTE 
+        ON(TIPOS_ESTUDIANTE_ESTUDIANTE.dni_estudiante = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_tipos_estudiante AS TIPO_ESTUDIANTE ON(TIPO_ESTUDIANTE.codigo = TIPOS_ESTUDIANTE_ESTUDIANTE.codigo_tipo_estudiante);   
+        
+		        
+	-- Buscar por tipo de solicitud e identidad
+	ELSEIF pcNumeroIdentidad IS NOT NULL AND pdFechaSolicitud IS NULL AND  pnCodigoTipoSolicitud IS NOT NULL THEN        
+    
+        
+	SELECT
+		PERSONA.*, ESTUDIANTE.no_cuenta AS NUMERO_CUENTA, ESTUDIANTE.indice_academico AS INDICE_ACADEMICO, 
+        TIPO_ESTUDIANTE.descripcion AS DESCRIPCION_TIPO_ESTUDIANTE,
+        TIPOS_SOLICITUDES.nombre as NOMBRE_TIPO_SOLICITUD, SOLICITUDES.fecha_solicitud AS FECHA_SOLICITUD 
+	FROM
+		(
+			SELECT CONCAT(Primer_nombre,' ', Primer_apellido) AS NOMBRE,
+            N_identidad AS NUMERO_IDENTIDAD
+            FROM persona AS PERSONA
+			WHERE
+            (
+				pnCodigoTipoSolicitud IS NOT NULL
+                AND N_identidad IN
+                (
+					SELECT dni_estudiante
+                    FROM sa_solicitudes
+                    WHERE sa_solicitudes.cod_tipo_solicitud = pnCodigoTipoSolicitud
+                )
+			)
+            AND
+			(
+				pcNumeroIdentidad IS NOT NULL 
+				AND N_identidad = pcNumeroIdentidad                
+			)  
+        )PERSONA INNER JOIN sa_estudiantes  as ESTUDIANTE ON(ESTUDIANTE.dni = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_solicitudes AS SOLICITUDES ON(SOLICITUDES.dni_estudiante = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_tipos_solicitud AS TIPOS_SOLICITUDES ON(TIPOS_SOLICITUDES.codigo = SOLICITUDES.cod_tipo_solicitud)
+        INNER JOIN sa_estudiantes_tipos_estudiantes AS TIPOS_ESTUDIANTE_ESTUDIANTE 
+        ON(TIPOS_ESTUDIANTE_ESTUDIANTE.dni_estudiante = PERSONA.NUMERO_IDENTIDAD)
+        INNER JOIN sa_tipos_estudiante AS TIPO_ESTUDIANTE ON(TIPO_ESTUDIANTE.codigo = TIPOS_ESTUDIANTE_ESTUDIANTE.codigo_tipo_estudiante);       
+    
+    END IF;
+    
+    
+
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_check_seguimiento`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_check_seguimiento`( 
+    IN numFolio_ VARCHAR(25),
+	IN seguimiento INT(11)
+)
+BEGIN 
+    DECLARE v_finished INTEGER DEFAULT 0;
+    DECLARE prioridad_ INTEGER DEFAULT 0;
+    DECLARE fechaIni DATE;	
+	DECLARE usuario INTEGER DEFAULT 0;
+	DECLARE rol TINYINT DEFAULT 0;
+	DECLARE alertId INTEGER DEFAULT 0;
+	
+	-- declare cursor 
+	DEClARE usuarios_cursor CURSOR FOR
+    SELECT id_usuario FROM usuario WHERE Estado = 1;
+	
+	-- declare NOT FOUND handler
+    DECLARE CONTINUE HANDLER
+    FOR NOT FOUND SET v_finished = 1;
+	
+    START TRANSACTION;
+	
+	    SET fechaIni = (SELECT FechaCambio FROM seguimiento_historico WHERE Id_Seguimiento = seguimiento ORDER BY FechaCambio DESC LIMIT 1);
+	
+        IF( DATEDIFF(NOW(),DATE_ADD(fechaIni,INTERVAL 3 DAY)) > 0 ) THEN
+		
+		    SET prioridad_ = (SELECT sp_get_prioridad (numFolio_));
+			
+		    INSERT INTO alerta VALUES(NULL,numFolio_,NOW(),0);
+			
+			SET alertId = LAST_INSERT_ID();
+
+		    IF(prioridad_ < 3) THEN
+			    UPDATE folios SET Prioridad = prioridad_ + 1 WHERE NroFolio = numFolio_;
+				INSERT INTO prioridad_folio VALUES (NULL,numFolio_,prioridad_,CURDATE());
+			END IF;	
+			
+				OPEN usuarios_cursor;
+				    usuarios_loop: LOOP
+				        FETCH usuarios_cursor INTO usuario;
+						
+						IF v_finished = 1 THEN
+					        LEAVE usuarios_loop;
+                        END IF;
+						
+						SET rol = (SELECT Id_Rol FROM usuario WHERE id_Usuario = usuario);
+
+						IF( rol > 39 AND rol < 51 AND prioridad_ + 1 = 2 ) THEN
+						    INSERT INTO usuario_alertado VALUES (NULL,alertId,usuario);
+						END IF;
+						IF( rol > 49 AND prioridad_ = 3 ) THEN
+						    INSERT INTO usuario_alertado VALUES (NULL,alertId,usuario);
+						END IF;
+				    END LOOP usuarios_loop;
+				CLOSE usuarios_cursor;		
+		END IF;
+    COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_DAR_ALTA_SOLICITUD`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_DAR_ALTA_SOLICITUD`(
+	IN pnCodigoSolicitud INT, -- Código de la solicitud
+    IN pnNotaHimno INT, -- Nota del examen del himno en caso de que aplique
+    OUT pcMensajeError VARCHAR(500) -- Parámetro para mensajes de error
+)
+SP:BEGIN
+
+    DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar ERRORES DE servidor
+    DECLARE vnCodigoSolicitudDesactiva INT DEFAULT 2; -- Código del estado de solicitud DESACTIVADA
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    START TRANSACTION;
+    
+    -- Desactivar solicitud
+    SET vcTempMensajeError := 'Al actualizar el estado de la solicitud';
+    UPDATE sa_solicitudes
+    SET cod_estado = vnCodigoSolicitudDesactiva
+    WHERE codigo = pnCodigoSolicitud;
+    
+    -- Determinar si aplica para el himno
+    IF EXISTS
+    (
+		SELECT cod_solicitud
+		FROM sa_examenes_himno
+		WHERE cod_solicitud = pnCodigoSolicitud
+    )
+    THEN
+		BEGIN
+			
+			-- Actualizar la nota del himno
+			SET vcTempMensajeError := 'Al actualizar la nota del himno';
+            
+            UPDATE sa_examenes_himno
+            SET nota_himno = pnNotaHimno
+            WHERE cod_solicitud = pnCodigoSolicitud;
+            
+        END;
+	END IF;	
+        
+    
+    COMMIT;
+    
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_ELIMINAR_ACONDICIONAMIENTOS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ELIMINAR_ACONDICIONAMIENTOS`(
+    IN pnCodigoAcondicionamiento INT, -- Código de acondicionamiento (En caso de que acción sea actualizar o eliminar)
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+SP: BEGIN
+ DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN    
+  ROLLBACK;
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+        END;
+-- Determinar si el acondicionamiento tiene vinculacion con algun 
+        SET vcTempMensajeError := 'Error determinar si acondicionamiento tiene vinculación en instancias_acondicionamientos ';
+        IF EXISTS
+        (
+SELECT cod_acondicionamiento
+            FROM ca_instancias_acondicionamientos
+            WHERE cod_acondicionamiento = pnCodigoAcondicionamiento
+        )
+        THEN
+   BEGIN
+    SET pcMensajeError := 'Hay instancias_acondicionamientos que estan viculadas con este acondicionamiento, no puede ser borrada.';
+                LEAVE SP;
+   END;
+  END IF;         
+  -- Eliminar el acondicionamiento
+        SET vcTempMensajeError := 'Error al eliminar el acondicionamiento';        
+        START TRANSACTION;
+        DELETE FROM ca_acondicionamientos
+        WHERE codigo = pnCodigoAcondicionamiento;
+        COMMIT;
+end$$
+
+DROP PROCEDURE IF EXISTS `SP_ELIMINAR_AREAS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ELIMINAR_AREAS`(
+    IN pnCodigoArea INT, -- Código de area (En caso de que acción sea actualizar o eliminar)
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+SP: BEGIN
+ DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN    
+  ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+        END;
+-- Determinar si la area tiene vinculacion con algun proyecto
+        SET vcTempMensajeError := 'Error determinar si el area tiene vinculación con algún proyecto';
+        
+        IF EXISTS
+        (
+SELECT cod_area
+            FROM ca_proyectos
+            WHERE cod_area = pnCodigoArea
+        )
+        THEN
+   BEGIN
+            
+    SET pcMensajeError := 'Hay proyectos que estan viculados con esta area, no puede ser borrada.';
+                LEAVE SP;
+    
+   END;
+  END IF;         
+        
+  -- Eliminar el area
+        SET vcTempMensajeError := 'Error al eliminar el area';        
+        
+        START TRANSACTION;
+        
+        DELETE FROM ca_areas
+        WHERE codigo = pnCodigoArea;
+        
+        COMMIT;
+end$$
+
+DROP PROCEDURE IF EXISTS `sp_eliminar_categorias_folios`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_eliminar_categorias_folios`(IN `sp_Id_categoria` INT, OUT `mensaje` VARCHAR(150), IN `codMensaje` TINYINT)
+BEGIN 
+   IF NOT EXISTS (SELECT 1 FROM folios WHERE Categoria = sp_Id_categoria) THEN 
+     DELETE FROM categorias_folios WHERE Id_categoria = sp_Id_categoria; 
+     SET mensaje = "Exito al eliminar la categoria de los folios"; 
+     SET codMensaje = 1;  -- codigo del mensaje de salida
+   ELSE
+     SET mensaje = "Error al eliminar la categoria de los folios, esta esta enlazada a un folio"; -- mensaje de salida
+     SET codMensaje = 0; -- codigo del mensaje de salida
+   END IF; 
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_ELIMINAR_CIUDADES`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ELIMINAR_CIUDADES`(
+	in pcCodigo int, -- Codigo asociado a la ciudad que queremos eliminar
+	OUT `mensaje` VARCHAR(150)
+)
+SP: begin
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     ROLLBACK;
+   END;
+   
+   IF EXISTS
+   (
+		SELECT
+			cod_ciudad_origen
+		FROM 	
+			sa_estudiantes
+		WHERE 
+			cod_ciudad_origen = pcCodigo
+   )
+   THEN
+		BEGIN
+			SET mensaje = 'Existen estudiantes registrados con esta ciudad. No puede ser borrada.';
+            LEAVE SP;
+        END;
+   END IF;
+   
+	delete from sa_ciudades where sa_ciudades.codigo= pcCodigo;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_ELIMINAR_ESTADOS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ELIMINAR_ESTADOS`(
+    IN pnCodigo INT, -- Codigo de estado
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+SP: BEGIN
+ DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN    
+  ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+        END;
+
+-- Determinar si el estado tiene vinculacion con algun proyecto
+        SET vcTempMensajeError := 'Error al determinar si el estado tiene vinculación con alguna carga academica';
+        
+        IF EXISTS
+        (
+	    SELECT cod_estado
+            FROM ca_cargas_academicas
+            WHERE cod_estado = pnCodigo
+        )
+        THEN
+   BEGIN
+            
+    SET pcMensajeError := 'Existen cargas academicas vinculadas con este estado, no puede ser borrado.';
+                LEAVE SP;
+    
+   END;
+  END IF;         
+        
+-- Eliminar el estado
+        SET vcTempMensajeError := 'Error al eliminar el estado, intentelo de nuevo';        
+        
+        START TRANSACTION;
+        
+        DELETE FROM ca_estados_carga
+        WHERE codigo = pnCodigo;
+        
+        COMMIT;
+end$$
+
+DROP PROCEDURE IF EXISTS `sp_eliminar_estado_seguimiento`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_eliminar_estado_seguimiento`( 
+IN `Id_Estado_Seguimiento_` tinyint(4), 
+    OUT mensaje VARCHAR(150), -- Parametro de salida
+    OUT codMensaje TINYINT  -- ParamentroId_Prioridad
+)
+BEGIN 
+   IF NOT EXISTS (SELECT 1 FROM seguimiento_historico WHERE  Id_Estado_Seguimiento = Id_Estado_Seguimiento_) THEN -- Revisa si NO hay un registro en seguimiento historico con este estado
+     DELETE FROM estado_seguimiento WHERE Id_Estado_Seguimiento  = Id_Estado_Seguimiento_; -- Borra la ubicacion si no existe el registro 
+     SET mensaje = "Exito al eliminar el estado de seguimiento"; -- mensaje de salida
+     SET codMensaje = 1;  -- codigo del mensaje de salida
+   ELSE
+     SET mensaje = "Error al eliminar el estado, esta esta enlazada a un seguimiento historico"; -- mensaje de salida
+     SET codMensaje = 0; -- codigo del mensaje de salida
+   END IF; 
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_ELIMINAR_FACULTADES`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ELIMINAR_FACULTADES`(
+IN pnCodigoFacultad INT, -- Código de facultad (En caso de que acción sea actualizar o eliminar)
+OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+SP: BEGIN
+DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN    
+ROLLBACK;    
+SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+SET pcMensajeError := vcTempMensajeError;
+END;
+-- Determinar si la area tiene vinculacion con algun proyecto
+SET vcTempMensajeError := 'Error determinar si facultad tiene vinculación en vinculaciones ';        
+IF EXISTS
+(
+SELECT cod_facultad
+FROM ca_vinculaciones
+WHERE cod_facultad = pnCodigoFacultad
+)
+THEN
+BEGIN            
+SET pcMensajeError := 'Hay vinculaciones que estan viculadas con esta facultad, no puede ser borrada.';
+LEAVE SP;    
+END;
+END IF;                 
+-- Eliminar el area
+SET vcTempMensajeError := 'Error al eliminar la facultad';                
+START TRANSACTION;        
+DELETE FROM ca_facultades
+WHERE codigo = pnCodigoFacultad;        
+COMMIT;
+end$$
+
+DROP PROCEDURE IF EXISTS `SP_ELIMINAR_INSTANCIA_ACONDICIONAMIENTO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ELIMINAR_INSTANCIA_ACONDICIONAMIENTO`(
+    IN pnCodigoInstanciaA INT, -- Código de instancia_acondicionamiento (En caso de que acción sea actualizar o eliminar)
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+SP: BEGIN
+ DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN    
+  ROLLBACK;
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+        END;
+-- Determinar si el acondicionamiento tiene vinculacion con algun 
+        SET vcTempMensajeError := 'Error determinar si la instancia_acondicionamiento tiene vinculación en aulas_instancias_acondicionamientos ';
+        IF EXISTS
+        (
+SELECT cod_instancia_acondicionamiento
+            FROM ca_aulas_instancias_acondicionamientos
+            WHERE cod_instancia_acondicionamiento = pnCodigoInstanciaA
+        )
+        THEN
+   BEGIN
+    SET pcMensajeError := 'Hay aulas_instancias_acondicionamientos que estan viculadas con esta instancia_acondicionamiento, no puede ser borrada.';
+                LEAVE SP;
+   END;
+  END IF;         
+  -- Eliminar el acondicionamiento
+        SET vcTempMensajeError := 'Error al eliminar la instancia_acondicionamiento';        
+        START TRANSACTION;
+        DELETE FROM ca_instancias_acondicionamientos
+        WHERE codigo = pnCodigoInstanciaA;
+        COMMIT;
+end$$
+
+DROP PROCEDURE IF EXISTS `SP_ELIMINAR_MENCION_HONORIFICA`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ELIMINAR_MENCION_HONORIFICA`(
+	in pcCodigo int, -- codigo de la mencion  que se quiere eliminar
+	OUT mensaje VARCHAR(150) 
+)
+SP: begin
+
+    DECLARE codMensaje INT;
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN     
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+   
+	delete from sa_menciones_honorificas where sa_menciones_honorificas.codigo= pcCodigo;
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_eliminar_organizacion`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_eliminar_organizacion`( 
+    IN sp_Id_Organizacion TINYINT, 
+    OUT mensaje VARCHAR(150), -- Parametro de salida
+    OUT codMensaje TINYINT  -- Paramentro
+)
+BEGIN 
+   IF NOT EXISTS (SELECT 1 FROM folios WHERE Organizacion = sp_Id_Organizacion) THEN -- Revisa si NO hay un registro en folios con esta organizacion
+     DELETE FROM organizacion WHERE Id_Organizacion = sp_Id_Organizacion; -- Borra la organizacion si no existe el registro 
+     SET mensaje = "Exito al eliminar la organizacion"; -- mensaje de salida
+     SET codMensaje = 1;  -- codigo del mensaje de salida
+   ELSE
+     SET mensaje = "Error al eliminar la organizacion, esta esta enlazada a un folio"; -- mensaje de salida
+     SET codMensaje = 0; -- codigo del mensaje de salida
+   END IF; 
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_ELIMINAR_ORIENTACION`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ELIMINAR_ORIENTACION`(
+	in pcCodigo int, -- codigo de la orientacion que se quiere eliminar
+	OUT mensaje VARCHAR(150) 
+)
+SP: begin
+
+    DECLARE codMensaje INT;
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+   
+   IF EXISTS
+   (
+		SELECT dni
+        FROM sa_estudiantes
+        WHERE cod_orientacion = pcCodigo
+   )
+   THEN
+		BEGIN
+			SET mensaje := 'Existen estudiantes asociados a esta orientacion. No puede ser borrada.';
+            LEAVE SP;
+        END;
+	END IF;
+   
+	delete from sa_orientaciones where sa_orientaciones.codigo= pcCodigo;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_ELIMINAR_PERIODO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ELIMINAR_PERIODO`(
+	in pcCodigo int, -- Codigo asociado al periodo que queremos eliminar
+	OUT `mensaje` VARCHAR(150)
+)
+SP: begin
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     ROLLBACK;
+   END;   
+	delete from sa_periodos where sa_periodos.codigo= pcCodigo;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_ELIMINAR_PERMISO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ELIMINAR_PERMISO`(
+	in pcCodigo int, -- Codigo asociado al periodo que queremos eliminar
+	OUT `mensaje` VARCHAR(150)
+)
+SP: begin
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     ROLLBACK;
+   END;   
+	delete from tipodepermiso where tipodepermiso.id_tipo_permiso = pcCodigo;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_ELIMINAR_PLANES_ESTUDIO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ELIMINAR_PLANES_ESTUDIO`(
+	in pcCodigo int, -- codigo del plan que se quiere eliminar
+	OUT mensaje VARCHAR(150) 
+)
+SP: begin
+
+    DECLARE codMensaje INT;
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operacion, por favor intende de nuevo dentro de un momento";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+   
+   IF EXISTS
+   (
+		SELECT
+			cod_plan_estudio
+		FROM 
+			sa_estudiantes
+		WHERE cod_plan_estudio = pcCodigo
+   )
+   THEN
+		BEGIN
+			SET mensaje = 'Existen estudiantes registrados con este plan de estudio. No puede ser borrado.';
+            LEAVE SP;
+        END;
+   END IF;
+   
+	delete from sa_planes_estudio where sa_planes_estudio.codigo= pcCodigo;
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_eliminar_prioridad`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_eliminar_prioridad`( 
+	IN `Id_Prioridad_` tinyint(4),
+    OUT mensaje VARCHAR(150), -- Parametro de salida
+    OUT codMensaje TINYINT  -- ParamentroId_Prioridad
+)
+BEGIN 
+   IF NOT EXISTS (SELECT 1 FROM folios WHERE  Prioridad = Id_Prioridad_) THEN -- Revisa si NO hay un registro en folios con esta prioridad
+     DELETE FROM prioridad WHERE Id_Prioridad = Id_Prioridad_; -- Borra la prioridad si no existe el registro 
+     SET mensaje = "Exito al eliminar la prioridad"; -- mensaje de salida
+     SET codMensaje = 1;  -- codigo del mensaje de salida
+   ELSE
+     SET mensaje = "Error al eliminar la prioridad, esta esta enlazada a un folio"; -- mensaje de salida
+     SET codMensaje = 0; -- codigo del mensaje de salida
+   END IF; 
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_ELIMINAR_TIPOS_DE_SOLICITUD`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ELIMINAR_TIPOS_DE_SOLICITUD`(
+IN pnCodigoTipoSolicitud INT, -- Código de area (En caso de que acción sea actualizar o eliminar)
+OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+SP: BEGIN
+DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+
+	BEGIN    
+		ROLLBACK;    
+		SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+		SET pcMensajeError := vcTempMensajeError;
+	END;
+
+-- Determinar si la area tiene vinculacion con algun proyecto
+	SET vcTempMensajeError := 'Error determinar si el tipo_de_solicitud tiene vinculación en Solicitudes ';        
+	IF EXISTS
+	(
+		SELECT cod_tipo_solicitud
+		FROM sa_solicitudes
+		WHERE cod_tipo_solicitud = pnCodigoTipoSolicitud
+	)
+	THEN
+		BEGIN            
+			SET pcMensajeError := 'Hay solicitudes que estan viculadas con este tipo de solicitud, no puede ser borrada.';
+			LEAVE SP;    
+		END;
+	END IF;        
+    
+	-- Eliminar el area
+	SET vcTempMensajeError := 'Error al eliminar el tipo de solicitud';                
+	START TRANSACTION;        
+    
+		DELETE FROM	 sa_tipos_solicitud_tipos_alumnos
+        WHERE cod_tipo_solicitud = pnCodigoTipoSolicitud;
+        
+		DELETE FROM sa_tipos_solicitud
+		WHERE codigo = pnCodigoTipoSolicitud;        
+	COMMIT;
+end$$
+
+DROP PROCEDURE IF EXISTS `SP_ELIMINAR_TIPO_DE_ESTUDIANTE`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_ELIMINAR_TIPO_DE_ESTUDIANTE`(
+	in pcCodigo int, -- codigo del tipo de estudiante que se quiere eliminar
+	OUT mensaje VARCHAR(150) 
+)
+SP: begin
+
+    DECLARE codMensaje INT;
+
+   DECLARE EXIT HANDLER FOR SQLEXCEPTION
+   BEGIN
+     SET mensaje = "No se pudo realizar la operación, por favor intente de nuevo, dentro de un momento.";
+     SET codMensaje = 0;
+     ROLLBACK;
+   END;
+   
+   IF EXISTS
+   (
+		SELECT codigo_tipo_estudiante
+        FROM sa_estudiantes_tipos_estudiantes
+        WHERE codigo_tipo_estudiante = pcCodigo
+   )
+   THEN
+		BEGIN
+			SET mensaje := 'Existen estudiantes asociados a este tipo. No puede ser borrado.';
+            LEAVE SP;
+        END;
+	END IF;
+   
+	delete from sa_tipos_estudiante where sa_tipos_estudiante.codigo= pcCodigo;
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_eliminar_ubicacion_archivo_fisica`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_eliminar_ubicacion_archivo_fisica`( 
+IN `Id_UbicacionArchivoFisico_` int(5), 
+    OUT mensaje VARCHAR(150), -- Parametro de salida
+    OUT codMensaje TINYINT  -- ParamentroId_Prioridad
+)
+BEGIN 
+   IF NOT EXISTS (SELECT 1 FROM folios WHERE  UbicacionFisica = Id_UbicacionArchivoFisico_) THEN -- Revisa si NO hay un registro en folios con esta ubicacion
+     DELETE FROM ubicacion_archivofisico WHERE  Id_UbicacionArchivoFisico = Id_UbicacionArchivoFisico_; -- Borra la ubicacion si no existe el registro 
+     SET mensaje = "Exito al eliminar la ubicacion"; -- mensaje de salida
+     SET codMensaje = 1;  -- codigo del mensaje de salida
+   ELSE
+     SET mensaje = "Error al eliminar la ubicacion, esta esta enlazada a un folio"; -- mensaje de salida
+     SET codMensaje = 0; -- codigo del mensaje de salida
+   END IF; 
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_eliminar_ubicacion_notificaciones`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_eliminar_ubicacion_notificaciones`( 
+IN `Id_UbicacionNotificaciones_` tinyint(4),
+    OUT mensaje VARCHAR(150), -- Parametro de salida
+    OUT codMensaje TINYINT  -- ParamentroId_Prioridad
+)
+BEGIN 
+   IF NOT EXISTS (SELECT 1 FROM usuario_notificado WHERE  IdUbicacionNotificacion = Id_UbicacionNotificaciones_) THEN -- Revisa si NO hay un registro en usuario_notificado con esta ubicacion
+     DELETE FROM ubicacion_notificaciones WHERE  Id_UbicacionNotificaciones = Id_UbicacionNotificaciones_; -- Borra la ubicacion si no existe el registro 
+     SET mensaje = "Exito al eliminar la ubicacion"; -- mensaje de salida
+     SET codMensaje = 1;  -- codigo del mensaje de salida
+   ELSE
+     SET mensaje = "Error al eliminar la ubicacion, esta esta enlazada a un folio"; -- mensaje de salida
+     SET codMensaje = 0; -- codigo del mensaje de salida
+   END IF; 
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_eliminar_unidad_academica`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_eliminar_unidad_academica`( 
+	IN `Id_UnidadAcademica_` int(11), 
+    OUT mensaje VARCHAR(150), -- Parametro de salida
+    OUT codMensaje TINYINT  -- ParamentroId_Prioridad
+)
+BEGIN 
+   IF NOT EXISTS (SELECT 1 FROM folios WHERE  UnidadAcademica = Id_UnidadAcademica_) THEN -- Revisa si NO hay un registro en permisos con esta unidad academica
+     DELETE FROM unidad_academica WHERE Id_UnidadAcademica = Id_UnidadAcademica_; -- Borra la unidad si no existe el registro 
+     SET mensaje = "Exito al eliminar el la unidad academica"; -- mensaje de salida
+     SET codMensaje = 1;  -- codigo del mensaje de salida
+   ELSE
+     SET mensaje = "Error al eliminar la unidad, esta esta enlazada a un permiso"; -- mensaje de salida
+     SET codMensaje = 0; -- codigo del mensaje de salida
+   END IF; 
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_GESTIONAR_AREAS_VINCULACION`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_GESTIONAR_AREAS_VINCULACION`(
+	-- Descripción: Gestiona las Áreas de Vinculación.
+    -- Registra, modifica y elimina en base al parámetro pnAccion
+    -- pnAccion = 1 : Registrar Área de Vinculación
+    -- pnAccion = 2 : Actualizar Área de Vinculación
+    -- pnAccion = 3 : Registrar edificio
+	-- CASalgadoMontoya 2015-07-17 Basado en el SP de LDeras SP_GESTIONAR_EDIFCIOS 2015-07-04
+    
+    IN pnCodigoArea INT, -- Código de Área (En caso de que acción sea actualizar o eliminar)
+    IN pcNombreArea VARCHAR(200), -- Nombre del Área de Vinculación
+    IN pnCodigoFacultad INT, -- Código de la Facultad asociada al Área de Vinculación
+    IN pnAccion INT, -- Parámetro para determinar qué acción se realizará
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+SP: BEGIN
+
+	DECLARE vnAccionRegistrar INT DEFAULT 1; -- Acción que determina registrar
+    DECLARE vnAccionActualizar INT DEFAULT 2; -- Acción que determina actualizar
+    DECLARE vnAccionEliminar INT DEFAULT 3; -- Acción que determina elimiinar
+
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- **********************************REGISTRAR ÁREA DE VINCULACIÓN********************************
+    IF pnAccion = vnAccionRegistrar THEN 
+    
+		-- Determinar que el código de área no exista ya en la base.
+        SET vcTempMensajeError := 'Error al determinar existencia del Área de Vinculación.';
+        
+        IF EXISTS
+        (
+			SELECT codigo
+            FROM ca_vinculaciones
+            WHERE codigo = pnCodigoArea
+        )
+        THEN
+			BEGIN
+            
+				SET pcMensajeError := 'Ya existe un Área de Vinculación con este código, intentelo de nuevo con otro código.';
+                LEAVE SP;
+				
+			END;
+		END IF;
+        
+        START TRANSACTION;
+        
+        -- Registrar el área
+        SET vcTempMensajeError := 'Error al registrar el Área de Vinculación. ';
+        
+        INSERT INTO ca_vinculaciones VALUES (pnCodigoArea, pcNombreArea, pnCodigoFacultad);
+        
+        COMMIT;
+    
+    -- **********************************ACTUALIZAR ÁREA********************************
+    ELSEIF pnAccion = vnAccionActualizar THEN
+    
+		-- Determinar que el código del área no exista en la base de datos.
+        SET vcTempMensajeError := 'Error al determinar existencia del Área de Vinculación.';
+        
+        IF NOT EXISTS
+        (
+			SELECT codigo
+            FROM ca_vinculaciones
+            WHERE codigo = pnCodigoArea
+        )
+        THEN
+			BEGIN
+            
+				SET pcMensajeError := 'Ya existe un Área de Vinculación con este código, intentelo de nuevo con otro código.';
+                LEAVE SP;
+				
+			END;
+		END IF;   
+        
+        START TRANSACTION;
+        
+        -- Actualizar el nombre y/o facultad asociadas al área de Vinculación
+        SET vcTempMensajeError := 'Error al actualizar la información del Área de Vinculación.';
+        
+		UPDATE ca_vinculaciones 
+		SET 
+			nombre = pcNombreArea,
+            cod_facultad = pnCodigoFacultad
+		WHERE
+			codigo = pnCodigoArea;
+        COMMIT;
+    
+    -- **********************************ELIMINAR AREA********************************
+    ELSE
+        
+		-- Eliminar el edificio
+        SET vcTempMensajeError := 'Error al eliminar el Área de Vinculación.';        
+        
+        START TRANSACTION;
+        
+		DELETE FROM ca_vinculaciones
+		WHERE
+			codigo = pnCodigoArea;
+        COMMIT;
+    
+    END IF;
+		
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_GESTIONAR_AULAS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_GESTIONAR_AULAS`(
+	-- Descripción: Gestiona las aulas en los edificios
+    -- Registra, modifica y elimina en base al parámetro pnAccion
+    -- pnAccion = 1 : Registrar aula
+    -- pnAccion = 2 : actualizar aula
+    -- pnAccion = 3 : Registrar aula
+	-- LDeras 2015-07-04
+    
+    IN pnCodigoEdificio INT, -- Código de edificio 
+    IN pcNumeroAula VARCHAR(100), -- Número de aula o nombre de aula
+    IN pnCodigoAula INT, -- Código de aula (En caso de que acción sea actualizar o eliminar)
+    IN pnAccion INT, -- Parámetro para determinar qué acción se realizará
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+SP: BEGIN
+
+	DECLARE vnAccionRegistrar INT DEFAULT 1; -- Acción que determina registrar un edificio
+    DECLARE vnAccionActualizar INT DEFAULT 2; -- Acción que determina actualizar un edificio
+    DECLARE vnAccionEliminar INT DEFAULT 3; -- Acción que determina eliimiinar un edificio
+    
+    DECLARE vnSiguienteCodigoAula INT; -- Variable para almacenar el siguiente código (NEXTVAL)
+
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError, ' ', ms );
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- **********************************REGISTRAR AULA********************************
+    IF pnAccion = vnAccionRegistrar THEN 
+    
+		-- Determinar que el número de aula no esté repetido
+        SET vcTempMensajeError := 'Error al determinar existencia del número de aula';
+        
+        IF EXISTS
+        (
+			SELECT codigo
+            FROM ca_aulas
+            WHERE cod_edificio = pnCodigoEdificio
+            AND numero_aula = pcNumeroAula
+        )
+        THEN
+			BEGIN
+            
+				SET pcMensajeError := CONCAT('Ya se ha registrado un aula con el número ', pcNumeroAula, ' en este edificio. Intentelo de nuevo.');
+                LEAVE SP;
+				
+			END;
+		END IF;   
+
+        
+        START TRANSACTION;
+        
+        SELECT 
+			IFNULL(CONVERT(MAX(codigo), SIGNED), 0)
+		INTO
+			vnSiguienteCodigoAula
+		FROM
+			ca_aulas;
+        
+        
+        
+        
+        -- Registrar el edificio
+        SET vcTempMensajeError := 'Error al registrar aula ';
+        
+        INSERT INTO ca_aulas(codigo, cod_edificio, numero_aula)
+        VALUES ( CAST(vnSiguienteCodigoAula + 1 AS CHAR), pnCodigoEdificio, pcNumeroAula);
+        
+        COMMIT;
+    
+    -- **********************************ACTUALIZAR AULA********************************
+    ELSEIF pnAccion = vnAccionActualizar THEN
+    
+		-- Determinar que el número de aula ya esté registrado
+        SET vcTempMensajeError := 'Error al determinar existencia del número de aula';
+        
+        IF EXISTS
+        (
+			SELECT codigo
+            FROM ca_aulas
+            WHERE cod_edificio = pnCodigoEdificio
+            AND numero_aula = pcNumeroAula
+            AND codigo != pnCodigoAula
+        )
+        THEN
+			BEGIN
+            
+				SET pcMensajeError := CONCAT('Ya se ha registrado un aula con el número ', pcNumeroAula, ' en este edificio. Intentelo de nuevo.');
+                LEAVE SP;
+				
+			END;
+		END IF;         
+        
+        START TRANSACTION;
+        
+        -- Actualizar el número de aula
+        SET vcTempMensajeError := 'Error al actualizar el número de aula';
+        
+        UPDATE ca_aulas
+        SET numero_aula = pcNumeroAula
+        WHERE codigo = pnCodigoAula;
+        
+        COMMIT;
+    
+    -- **********************************ELIMINAR AULA********************************
+    ELSE
+    
+		-- Determinar si el aula tiene acondicionamientos asignados
+        SET vcTempMensajeError := 'Error determinar el aula tiene acondicionamientos asignados';
+        
+        IF EXISTS
+        (
+			SELECT cod_aula
+            FROM ca_aulas_instancias_acondicionamientos
+            WHERE cod_aula = pnCodigoAula
+        )
+        THEN
+			BEGIN
+            
+				SET pcMensajeError := 'El aula tiene acondicionamientos asignados, no puede ser borrada.';
+                LEAVE SP;
+				
+			END;
+		END IF;         
+        
+		-- Eliminar el aula
+        SET vcTempMensajeError := 'Error al eliminar el aula';        
+        
+        START TRANSACTION;
+        
+        DELETE FROM ca_aulas
+		WHERE codigo = pnCodigoAula;
+        
+        COMMIT;
+    
+    END IF;
+		
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_GESTIONAR_EDIFICIOS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_GESTIONAR_EDIFICIOS`(
+	-- Descripción: Gestiona los edificios de la universidad
+    -- Registra, modifica y elimina en base al parámetro pnAccion
+    -- pnAccion = 1 : Registrar edificio
+    -- pnAccion = 2 : actualizar edificio
+    -- pnAccion = 3 : Registrar edificio
+	-- LDeras 2015-07-04
+    
+    IN pnCodigoEdificio INT, -- Código de edificio (En caso de que acción sea actualizar o eliminar)
+    IN pcDescripcion VARCHAR(200), -- Descripción del edificio
+    IN pnAccion INT, -- Parámetro para determinar qué acción se realizará
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+SP: BEGIN
+
+	DECLARE vnAccionRegistrar INT DEFAULT 1; -- Acción que determina registrar un edificio
+    DECLARE vnAccionActualizar INT DEFAULT 2; -- Acción que determina actualizar un edificio
+    DECLARE vnAccionEliminar INT DEFAULT 3; -- Acción que determina eliimiinar un edificio
+
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- **********************************REGISTRAR EDIFICIO********************************
+    IF pnAccion = vnAccionRegistrar THEN 
+    
+		-- Determinar que el nombre del edificio ya esté registrado
+        SET vcTempMensajeError := 'Error al determinar existencia del nombre del edificio';
+        
+        IF EXISTS
+        (
+			SELECT descripcion
+            FROM edificios
+            WHERE descripcion = pcDescripcion
+        )
+        THEN
+			BEGIN
+            
+				SET pcMensajeError := 'Ya existe un edificio con este nombre, intentelo de nuevo con otro nombre.';
+                LEAVE SP;
+				
+			END;
+		END IF;
+        
+        START TRANSACTION;
+        
+        -- Registrar el edificio
+        SET vcTempMensajeError := 'Error al registrar edificio ';
+        
+        INSERT INTO edificios(descripcion)
+        VALUES (pcDescripcion);
+        
+        COMMIT;
+    
+    -- **********************************ACTUALIZAR EDIFICIO********************************
+    ELSEIF pnAccion = vnAccionActualizar THEN
+    
+		-- Determinar que el nombre del edificio ya esté registrado
+        SET vcTempMensajeError := 'Error al determinar existencia del nombre del edificio';
+        
+        IF EXISTS
+        (
+			SELECT descripcion
+            FROM edificios
+            WHERE descripcion = pcDescripcion
+            AND Edificio_ID != pnCodigoEdificio
+        )
+        THEN
+			BEGIN
+            
+				SET pcMensajeError := 'Ya existe un edificio con este nombre, intentelo de nuevo con otro nombre.';
+                LEAVE SP;
+				
+			END;
+		END IF;    
+        
+        START TRANSACTION;
+        
+        -- Actualizar el nombre (DESCRIPCION) del edificio
+        SET vcTempMensajeError := 'Error al actualizar la informaciónd el edificio ';
+        
+        UPDATE edificios
+		SET descripcion = pcDescripcion
+        WHERE Edificio_ID = pnCodigoEdificio;
+        
+        COMMIT;
+    
+    -- **********************************ELIMINAR EDIFICIO********************************
+    ELSE
+    
+		-- Determinar si el edificio ya tiene aulas asignadas
+        SET vcTempMensajeError := 'Error determinar si el edificio tiene aulas asignadas';
+        
+        IF EXISTS
+        (
+			SELECT cod_edificio
+            FROM ca_aulas
+            WHERE cod_edificio = pnCodigoEdificio
+        )
+        THEN
+			BEGIN
+            
+				SET pcMensajeError := 'Ya hay aulas registradas en este edificio, no puede ser borrado.';
+                LEAVE SP;
+				
+			END;
+		END IF;         
+        
+		-- Eliminar el edificio
+        SET vcTempMensajeError := 'Error al eliminar el edificio';        
+        
+        START TRANSACTION;
+        
+        DELETE FROM edificios
+        WHERE Edificio_ID = pnCodigoEdificio;
+        
+        COMMIT;
+    
+    END IF;
+		
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_INSERTAR_AREAS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_INSERTAR_AREAS`(
+    IN pcnombre VARCHAR(50), -- Almacena el nombre de la solicitud
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+)
+SP:BEGIN
+ 
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar posibles errores no controlados de servidor
+	DECLARE vnContadorArea INT DEFAULT 0; -- Variable para determinar si el nombre de solicitud ya estÃ¡ siendo usado
+    DECLARE vcMensajeErrorServidor TEXT; -- Variable para almacenar el mensaje de error del servidor
+    
+        DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;    
+    END;
+    
+     -- Determinar si el nombre de solicitud ya estÃ¡ siendo usado
+    SET vcTempMensajeError := 'Error al seleccionar COUNT de nombre de usuario';
+	SELECT
+		COUNT(nombre)
+	INTO
+		vnContadorArea
+	FROM
+		ca_areas
+	WHERE
+		nombre = pcnombre;
+        
+        
+	-- El nombre de solicitud ya estÃ¡ siendo usado
+	IF vnContadorArea > 0 then
+    
+		SET pcMensajeError := 'El nombre de Solicitud ya esta¡ siendo usado, intenta otro';
+        LEAVE SP;
+    
+    END IF;
+    
+    SET vcTempMensajeError := 'Error al crear el registro en la tabla ca_facultades';
+    INSERT INTO ca_areas (nombre)
+    VALUES (pcnombre);    
+
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_insertar_categorias_folios`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_insertar_categorias_folios`(
+	 IN `NombreCategoria_` text, IN `DescripcionCategoria_` text,
+    OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+
+   START TRANSACTION;
+
+   IF NOT EXISTS (SELECT 1 FROM categorias_folios WHERE NombreCategoria = NombreCategoria_) THEN 
+     
+     INSERT INTO categorias_folios (Id_categoria, NombreCategoria, DescripcionCategoria) 
+     VALUES(null,NombreCategoria_,DescripcionCategoria_);				
+     SET mensaje = "la categoria de los folios se ha insertado satisfactoriamente."; 
+     SET codMensaje = 1;  
+   ELSE
+     SET mensaje = "esta categoria de los folios ya estÃ¡ en sistema, por favor revise el numero de la categoria que desea ingresar";
+     SET codMensaje = 0;
+   END IF; 
+   
+   COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_INSERTAR_ESTADOS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_INSERTAR_ESTADOS`(
+    IN pcDescripcion VARCHAR(50), -- Almacena el nombre de estados
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+)
+SP:BEGIN
+ 
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar posibles errores no controlados de servidor
+	DECLARE vnContadorEstados INT DEFAULT 0; -- Variable para determinar si el nombre de estado ya esta siendo usado
+    DECLARE vcMensajeErrorServidor TEXT; -- Variable para almacenar el mensaje de error del servidor
+    DECLARE vnCodigoEstado INT;
+    
+	DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;    
+    END;
+    
+     -- Determinar si el nombre de estado ya esta siendo usado
+    SET vcTempMensajeError := 'Error al determinar la existencia del estado';
+	SELECT
+		COUNT(descripcion)
+	INTO
+		vnContadorEstados
+	FROM
+		ca_estados_carga
+	WHERE
+		descripcion = pcDescripcion;
+        
+        
+	-- El nombre de estado ya esta siendo usado
+	IF vnContadorEstados > 0 then
+    
+		SET pcMensajeError := 'Ya existe un estado con este nombre, intente con otro nombre.';
+        LEAVE SP;
+    
+    END IF;
+    
+    SELECT 
+		IFNULL(MAX(codigo) + 1, 1)
+	INTO
+		vnCodigoEstado
+	FROM 
+		ca_estados_carga;
+	
+    
+    SET vcTempMensajeError := 'Error al crear el registro, intentelo de nuevo';
+    INSERT INTO ca_estados_carga (codigo, descripcion)
+    VALUES (vnCodigoEstado, pcDescripcion);    
+
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_insertar_estado_seguimiento`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_insertar_estado_seguimiento`(
+IN `DescripcionEstadoSeguimiento_` text,
+OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+   START TRANSACTION;
+   IF NOT EXISTS 
+		(
+			SELECT 1 FROM estado_seguimiento WHERE DescripcionEstadoSeguimiento = DescripcionEstadoSeguimiento_
+        ) 
+	THEN 
+    INSERT INTO  estado_seguimiento(DescripcionEstadoSeguimiento) 
+    VALUES(DescripcionEstadoSeguimiento_);			
+     
+     SET mensaje = "el estado de seguimiento ha sido insertado satisfactoriamente"; 
+     SET codMensaje = 1;  
+   ELSE
+     SET mensaje = "existe un seguimiento igual, por favor revise el numero del seguimiento que desea ingresar";
+     SET codMensaje = 0;
+   END IF; 
+      COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_insertar_folio`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_insertar_folio`(IN `numFolio_` VARCHAR(25), IN `fechaCreacion_` DATE, IN `fechaEntrada_` TIMESTAMP, IN `personaReferente_` TEXT, IN `unidadAcademica_` INT, IN `organizacion_` INT, IN categoria_ INT, IN `descripcion_` TEXT, IN `tipoFolio_` TINYINT, IN `ubicacionFisica_` INT(5), IN `prioridad_` TINYINT, IN `seguimiento_` INT(11), IN `notas_` TEXT, IN encargado INT, OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+
+   START TRANSACTION;
+
+   IF NOT EXISTS (SELECT 1 FROM folios WHERE NroFolio = numFolio_) THEN 
+     INSERT INTO folios (NroFolio, FechaCreacion, FechaEntrada, PersonaReferente, UnidadAcademica, Organizacion, Categoria, DescripcionAsunto, 
+            TipoFolio,UbicacionFisica, Prioridad) VALUES(numFolio_,fechaCreacion_,fechaEntrada_,personaReferente_,unidadAcademica_,organizacion_, categoria_, descripcion_,
+			tipoFolio_,ubicacionFisica_,prioridad_);
+			
+     INSERT INTO seguimiento VALUES(NULL,numFolio_,encargado,notas_,prioridad_,fechaEntrada_,NULL,seguimiento_);
+	 
+     INSERT INTO seguimiento_historico VALUES(NULL,LAST_INSERT_ID(),seguimiento_,notas_,prioridad_,NOW());
+	 
+     INSERT INTO prioridad_folio VALUES(NULL,numFolio_,prioridad_,fechaEntrada_);
+
+     SET mensaje = "El folio ha sido insertado satisfactoriamente."; 
+     SET codMensaje = 1;  
+   ELSE
+     SET mensaje = "El folio ya existe en sistema, por favor revise el numero del folio que desea ingresar";
+     SET codMensaje = 0;
+   END IF; 
+   
+   COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_insertar_folio_2`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_insertar_folio_2`(IN `numFolio_` VARCHAR(25), IN `fechaCreacion_` DATE, IN `fechaEntrada_` TIMESTAMP, IN `personaReferente_` TEXT, IN `unidadAcademica_` INT, IN `organizacion_` INT, IN categoria_ INT, IN `descripcion_` TEXT, IN `tipoFolio_` TINYINT, IN `ubicacionFisica_` INT(5), IN `prioridad_` TINYINT, IN `seguimiento_` INT(11), IN `notas_` TEXT, IN encargado INT, IN folioRef VARCHAR(25), OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+
+      START TRANSACTION;
+
+   IF NOT EXISTS (SELECT 1 FROM folios WHERE NroFolio = numFolio_) THEN 
+     INSERT INTO folios (NroFolio, FechaCreacion, FechaEntrada, PersonaReferente, UnidadAcademica, Organizacion, Categoria, DescripcionAsunto, 
+            TipoFolio,UbicacionFisica, Prioridad) VALUES(numFolio_,fechaCreacion_,fechaEntrada_,personaReferente_,unidadAcademica_,organizacion_, categoria_, descripcion_,
+			tipoFolio_,ubicacionFisica_,prioridad_);
+			
+     INSERT INTO seguimiento VALUES(NULL,numFolio_,encargado,notas_,prioridad_,fechaEntrada_,NULL,seguimiento_);
+	 
+     INSERT INTO seguimiento_historico VALUES(NULL,LAST_INSERT_ID(),seguimiento_,notas_,prioridad_,NOW());
+	 
+     INSERT INTO prioridad_folio VALUES(NULL,numFolio_,prioridad_,fechaEntrada_);
+     
+     UPDATE folios SET NroFolioRespuesta = numFolio_ WHERE NroFolio = folioRef;
+ 
+     SET mensaje = "El folio ha sido insertado satisfactoriamente."; 
+     SET codMensaje = 1;  
+   ELSE
+     SET mensaje = "El folio ya existe en sistema, por favor revise el numero del folio que desea ingresar";
+     SET codMensaje = 0;
+   END IF; 
+   
+   COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_insertar_organizacion`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_insertar_organizacion`(
+	 IN `nombreOrganizacion_` text, IN `ubicacion_` text,
+    OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+
+   START TRANSACTION;
+
+   IF NOT EXISTS (SELECT 1 FROM organizacion WHERE NombreOrganizacion = nombreOrganizacion_) THEN 
+     
+     INSERT INTO organizacion (Id_Organizacion, NombreOrganizacion, Ubicacion) 
+     VALUES(null,nombreOrganizacion_,ubicacion_);				
+     SET mensaje = "la organizacion ha insertado satisfactoriamente."; 
+     SET codMensaje = 1;  
+   ELSE
+     SET mensaje = "la organizacion ya estÃ¡ en sistema, por favor revise el numero de organizacion que desea ingresar";
+     SET codMensaje = 0;
+   END IF; 
+   
+   COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_insertar_prioridad`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_insertar_prioridad`(
+IN `Id_Prioridad_` tinyint(4), 
+IN `DescripcionPrioridad_` text,
+ OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+   START TRANSACTION;
+   IF NOT EXISTS (SELECT 1 FROM prioridad WHERE Id_Prioridad = Id_Prioridad_) THEN 
+     INSERT INTO  prioridad(Id_Prioridad, DescripcionPrioridad) 
+     VALUES(Id_Prioridad_,DescripcionPrioridad_);			
+     
+     SET mensaje = "la prioridad ha sido insertado satisfactoriamente"; 
+     SET codMensaje = 1;  
+   ELSE
+     SET mensaje = "existe una prioridad igual, por favor revise el nombre del folio que desea ingresar";
+     SET codMensaje = 0;
+   END IF; 
+      COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_insertar_ubicacion_archivo_fisica`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_insertar_ubicacion_archivo_fisica`(
+IN `DescripcionUbicacionFisica_` text,
+IN `Capacidad_` int(10),
+IN `TotalIngresados_` int(10),
+IN `HabilitadoParaAlmacenar_` tinyint(1), OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+   START TRANSACTION;
+   
+     INSERT INTO ubicacion_archivofisico (Id_UbicacionArchivoFisico, DescripcionUbicacionFisica, Capacidad,
+     TotalIngresados,HabilitadoParaAlmacenar) 
+     VALUES(NULL, DescripcionUbicacionFisica_, Capacidad_,
+     TotalIngresados_,HabilitadoParaAlmacenar_);			
+     
+     SET mensaje = "la ubicacion ha sido insertado satisfactoriamente"; 
+     SET codMensaje = 1;  
+  
+      COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_insertar_ubicacion_notificacion`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_insertar_ubicacion_notificacion`(
+IN `DescripcionUbicacionNotificaciones_` text,
+OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+   START TRANSACTION;
+  
+     INSERT INTO ubicacion_notificaciones (Id_UbicacionNotificaciones, DescripcionUbicacionNotificaciones) 
+     VALUES(NULL, DescripcionUbicacionNotificaciones_);			
+     
+     SET mensaje = "la ubicacion ha sido insertado satisfactoriamente"; 
+     SET codMensaje = 1;  
+  
+      COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_insertar_unidad_academica`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_insertar_unidad_academica`( 
+IN `NombreUnidadAcademica_` text,
+in `UbicacionUnidadAcademica_` text,
+OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+   START TRANSACTION;
+
+     INSERT INTO unidad_academica (Id_UnidadAcademica,NombreUnidadAcademica,UbicacionUnidadAcademica) 
+     VALUES(NULL,NombreUnidadAcademica_,UbicacionUnidadAcademica_);			
+     
+     SET mensaje = "la unidad academica ha sido insertado satisfactoriamente"; 
+     SET codMensaje = 1;  
+
+      COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_insertar_usuario`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_insertar_usuario`(IN `numEmpleado_` VARCHAR(13), IN `nombre_` VARCHAR(30), IN `Password_` VARCHAR(25), IN `rol_` INT(4), IN `fechaCreacion_` DATE, OUT `mensaje` VARCHAR(150), OUT `codMensaje` TINYINT)
+BEGIN 
+
+   START TRANSACTION;
+
+   IF NOT EXISTS (SELECT 1 FROM usuario WHERE nombre = nombre_) THEN 
+
+     INSERT INTO usuario VALUES(NULL,numEmpleado_,nombre_,udf_Encrypt_derecho(Password_),rol_,fechaCreacion_,NULL,1,0);
+
+     SET mensaje = "El usuario ha sido insertado satisfactoriamente."; 
+     SET codMensaje = 1;  
+   ELSE
+     SET mensaje = "El usuario ya existe en sistema, por favor revise el nombre del usuario que desea ingresar";
+     SET codMensaje = 0;
+   END IF; 
+   
+   COMMIT;
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_lee_actividades_no_terminadas_poa`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_lee_actividades_no_terminadas_poa`()
+begin
+
+select id_actividad,(select nombre from indicadores where indicadores.id_Indicadores=actividades.id_indicador) as indicador,descripcion,correlativo,supuesto,justificacion,medio_verificacion,poblacion_objetivo,fecha_inicio,fecha_fin from actividades where id_actividad not in (SELECT actividades_terminadas.id_Actividad FROM actividades_terminadas) and (select fecha_Fin from poa where poa.id_Poa in (select id_Poa from objetivos_institucionales where objetivos_institucionales.id_Objetivo in (select id_ObjetivosInsitucionales from indicadores where indicadores.id_Indicadores in (select id_indicador from actividades ))) and year(fecha_Fin) = year(now())) and (select fecha_de_Inicio from poa where poa.id_Poa in (select id_Poa from objetivos_institucionales where objetivos_institucionales.id_Objetivo in (select id_ObjetivosInsitucionales from indicadores where indicadores.id_Indicadores in (select id_indicador from actividades ))) and year(fecha_de_Inicio) = year(now())) and id_indicador in (select id_indicadores from indicadores where id_ObjetivosInsitucionales in (select id_Objetivo from objetivos_institucionales where id_Poa in(select id_Poa from poa where objetivos_institucionales.id_Poa =poa.id_Poa)));
+end$$
+
+DROP PROCEDURE IF EXISTS `sp_lee_actividades_terminadas_poa`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_lee_actividades_terminadas_poa`()
+begin
+select id_Actividad,No_Empleado,fecha,
+(select nombre from indicadores where indicadores.id_Indicadores in (select id_indicador from actividades where id_actividad in (SELECT actividades_terminadas.id_Actividad FROM actividades_terminadas) and id_indicador in (select id_indicadores from indicadores where id_ObjetivosInsitucionales in (select id_Objetivo from objetivos_institucionales where id_Poa = ID_POA)))) as id_Indicador,
+(select descripcion from actividades where id_actividad in (SELECT actividades_terminadas.id_Actividad FROM actividades_terminadas) and id_indicador in (select id_indicadores from indicadores where id_ObjetivosInsitucionales in (select id_Objetivo from objetivos_institucionales where objetivos_institucionales.id_Poa in(select id_Poa from poa where objetivos_institucionales.id_Poa =poa.id_Poa)))) as Descripcion,
+(select correlativo from actividades where id_actividad in (SELECT actividades_terminadas.id_Actividad FROM actividades_terminadas) and id_indicador in (select id_indicadores from indicadores where id_ObjetivosInsitucionales in (select id_Objetivo from objetivos_institucionales where objetivos_institucionales.id_Poa in(select id_Poa from poa where objetivos_institucionales.id_Poa =poa.id_Poa)))) as Correlativo,
+(select supuesto from actividades where id_actividad in (SELECT actividades_terminadas.id_Actividad FROM actividades_terminadas) and id_indicador in (select id_indicadores from indicadores where id_ObjetivosInsitucionales in (select id_Objetivo from objetivos_institucionales where objetivos_institucionales.id_Poa in(select id_Poa from poa where objetivos_institucionales.id_Poa =poa.id_Poa)))) as Supuesto,
+(select justificacion from actividades where id_actividad in (SELECT actividades_terminadas.id_Actividad FROM actividades_terminadas) and id_indicador in (select id_indicadores from indicadores where id_ObjetivosInsitucionales in (select id_Objetivo from objetivos_institucionales where objetivos_institucionales.id_Poa in(select id_Poa from poa where objetivos_institucionales.id_Poa =poa.id_Poa)))) as Justificacion,
+(select medio_verificacion from actividades where id_actividad in (SELECT actividades_terminadas.id_Actividad FROM actividades_terminadas) and id_indicador in (select id_indicadores from indicadores where id_ObjetivosInsitucionales in (select id_Objetivo from objetivos_institucionales where objetivos_institucionales.id_Poa in(select id_Poa from poa where objetivos_institucionales.id_Poa =poa.id_Poa)))) as Medio_De_Verificacion,
+(select poblacion_objetivo from actividades where id_actividad in (SELECT actividades_terminadas.id_Actividad FROM actividades_terminadas) and id_indicador in (select id_indicadores from indicadores where id_ObjetivosInsitucionales in (select id_Objetivo from objetivos_institucionales where objetivos_institucionales.id_Poa in(select id_Poa from poa where objetivos_institucionales.id_Poa =poa.id_Poa)))) as Poblacion_Objetivo,
+(select fecha_inicio from actividades where id_actividad in (SELECT actividades_terminadas.id_Actividad FROM actividades_terminadas) and id_indicador in (select id_indicadores from indicadores where id_ObjetivosInsitucionales in (select id_Objetivo from objetivos_institucionales where objetivos_institucionales.id_Poa in(select id_Poa from poa where objetivos_institucionales.id_Poa =poa.id_Poa)))) as Fecha_Inicio,
+(select fecha_fin from actividades where id_actividad in (SELECT actividades_terminadas.id_Actividad FROM actividades_terminadas) and id_indicador in (select id_indicadores from indicadores where id_ObjetivosInsitucionales in (select id_Objetivo from objetivos_institucionales where objetivos_institucionales.id_Poa in(select id_Poa from poa where objetivos_institucionales.id_Poa =poa.id_Poa)))) as Fecha_Fin
+from actividades_terminadas where actividades_terminadas.id_Actividad in (select id_actividad from actividades where id_indicador in (select id_indicadores from indicadores where id_ObjetivosInsitucionales in (select id_Objetivo from objetivos_institucionales where id_Poa in(select id_Poa from poa where objetivos_institucionales.id_Poa =poa.id_Poa))))
+AND (select fecha_de_Inicio  from poa where poa.id_Poa in (select id_Poa from objetivos_institucionales where objetivos_institucionales.id_Objetivo in (select id_ObjetivosInsitucionales from indicadores where indicadores.id_Indicadores in (select id_indicador from actividades ))) and year(fecha_de_Inicio) = year(now()))
+AND(select fecha_Fin as ff from poa where poa.id_Poa in (select id_Poa from objetivos_institucionales where objetivos_institucionales.id_Objetivo in (select id_ObjetivosInsitucionales from indicadores where indicadores.id_Indicadores in (select id_indicador from actividades ))) and year(fecha_Fin) = year(now()))
+;
+end$$
+
+DROP PROCEDURE IF EXISTS `sp_login`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_login`(IN `user_` VARCHAR(30), IN `pass` VARCHAR(25))
+BEGIN
+   SELECT id_Usuario,Id_Rol FROM usuario WHERE nombre = user_ AND pass = udf_Decrypt_derecho(Password) AND Estado = 1;
+END$$
+
+DROP PROCEDURE IF EXISTS `sp_log_user`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `sp_log_user`(IN `usuario_` INT(11), IN `ip` VARCHAR(45))
+begin
+    insert into usuario_log values (null,usuario_,now(),ip);
+end$$
+
+DROP PROCEDURE IF EXISTS `SP_MODIFICAR_ACONDICIONAMIENTOS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_MODIFICAR_ACONDICIONAMIENTOS`(
+	IN pccodigo CHAR(7), -- Almacena el codigo del acondicionamiento que se va a MODIFICAR
+    IN pcnombre VARCHAR(50), -- Almacena el nombre del acondicionamiento
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+)
+BEGIN
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no control
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN    
+		ROLLBACK;    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+	END;    
+    SET vcTempMensajeError := 'Error al MODIFICAR el registro en la tabla ca_acondicionamientos';
+    UPDATE ca_acondicionamientos SET nombre=pcnombre
+    WHERE 
+    codigo = pccodigo;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_MODIFICAR_AREAS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_MODIFICAR_AREAS`(
+	IN pccodigo CHAR(7), -- Almacena el codigo de la solicitud que se va a MODIFICAR
+    IN pcnombre VARCHAR(50), -- Almacena el nombre de la solicitud
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+)
+BEGIN
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no controlados
+    DECLARE vcMensajeErrorServidor TEXT; -- Variable para almacenar el mensaje de error del servidor
+        
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN    
+		ROLLBACK;    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeErrorf);
+        SET pcMensajeError := vcTempMensajeError;
+	END;    
+    
+    SET vcTempMensajeError := 'Error al MODIFICAR el registro en la tabla ca_facultads';
+    UPDATE ca_areas SET nombre=pcnombre
+    WHERE 
+    codigo = pccodigo;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_MODIFICAR_ESTADOS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_MODIFICAR_ESTADOS`(
+	IN pnCodigo CHAR(7), -- Almacena el codigo del estado que se va a modificar
+    IN pcDescripcion VARCHAR(50), -- Almacena el nombre del estado
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+)
+SP: BEGIN
+
+	DECLARE vcTempMensajeError VARCHAR(500); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+
+-- Determinar que el nombre del estado ya esta registrado
+        SET vcTempMensajeError := 'Error al determinar la existencia del estado';
+        
+        IF EXISTS
+        (
+			SELECT descripcion
+            FROM ca_estados_carga
+            WHERE descripcion = pcDescripcion
+            AND codigo != pnCodigo
+        )
+        THEN
+			BEGIN
+            
+				SET pcMensajeError := 'Ya existe este estado, intente de nuevo con otro nombre.';
+                LEAVE SP;
+				
+			END;
+		END IF;    
+        
+        START TRANSACTION;
+        
+        -- Actualizar el nombre de estado seleccionado
+    	SET vcTempMensajeError := 'Error al actualizar la información del estado ';    
+
+        UPDATE ca_estados_carga
+		SET descripcion = pcDescripcion
+        WHERE codigo = pnCodigo;
+        
+        COMMIT;
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_MODIFICAR_FACULTADES`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_MODIFICAR_FACULTADES`(
+IN pccodigo CHAR(7), -- Almacena el codigo de la solicitud que se va a MODIFICAR
+IN pcnombre VARCHAR(50), -- Almacena el nombre de la solicitud
+OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+)
+BEGIN
+DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no controlados
+DECLARE vcMensajeErrorServidor TEXT; -- Variable para almacenar el mensaje de error del servidor        
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN    
+ROLLBACK;    
+SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+SET pcMensajeError := vcTempMensajeError;
+END;        
+SET vcTempMensajeError := 'Error al MODIFICAR el registro en la tabla ca_facultads';
+UPDATE ca_facultades SET nombre=pcnombre
+WHERE 
+codigo = pccodigo;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_MODIFICAR_PERIODO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_MODIFICAR_PERIODO`(IN `pccodigo` INT, IN `pcnombre` VARCHAR(20), IN `pcMensajeError` TEXT)
+    NO SQL
+BEGIN
+DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no controlados
+DECLARE vcMensajeErrorServidor TEXT; -- Variable para almacenar el mensaje de error del servidor        
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN    
+ROLLBACK;    
+SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+SET pcMensajeError := vcTempMensajeError;
+END;        
+SET vcTempMensajeError := 'Error al MODIFICAR el registro en la tabla sa_periodos';
+UPDATE sa_periodos SET nombre=pcnombre
+WHERE 
+codigo = pccodigo;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_MODIFICAR_SOLICITUDES`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_MODIFICAR_SOLICITUDES`(
+	IN pccodigo CHAR(7), -- Almacena el codigo de la solicitud que se va a MODIFICAR
+    IN pcnombre VARCHAR(50), -- Almacena el nombre de la solicitud
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+)
+BEGIN
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no controlados
+    DECLARE vcMensajeErrorServidor TEXT; -- Variable para almacenar el mensaje de error del servidor
+        
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN    
+		ROLLBACK;    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+	END;    
+    
+    SET vcTempMensajeError := 'Error al MODIFICAR el registro en la tabla sa_tipos_solicitud';
+    UPDATE sa_tipos_solicitud SET nombre=pcnombre
+    WHERE 
+    codigo = pccodigo;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_MODIFICAR_TIPOS_SOLICITUDES`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_MODIFICAR_TIPOS_SOLICITUDES`(
+IN pccodigo CHAR(7), -- Almacena el codigo de la solicitud que se va a MODIFICAR
+IN pcnombre VARCHAR(50), -- Almacena el nombre de la solicitud
+OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+)
+BEGIN
+DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no controlados
+DECLARE vcMensajeErrorServidor TEXT; -- Variable para almacenar el mensaje de error del servidor        
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN    
+ROLLBACK;    
+SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+SET pcMensajeError := vcTempMensajeError;
+END;        
+SET vcTempMensajeError := 'Error al MODIFICAR el registro en la tabla sa_tipos_solicitud';
+UPDATE sa_tipos_solicitud SET nombre=pcnombre
+WHERE 
+codigo = pccodigo;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_AREAS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_AREAS`(
+	-- Descripción: Obtiene los edificios relacionados con la carga académica
+	-- LDeras 2015-07-04
+    
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+BEGIN
+
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- Obtener los edificios
+    SET vcTempMensajeError := 'Error al obtener las areas';
+    
+    SELECT 
+		codigo, nombre
+	FROM
+		ca_areas;
+		
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_AREAS_POYECTO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_AREAS_POYECTO`(
+OUT pcMensajeError VARCHAR(500))
+BEGIN
+
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+
+    SET vcTempMensajeError := 'Error al obtener las areas del proyecto';
+    
+    SELECT
+		codigo,nombre
+	FROM 
+		ca_areas;
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_AREAS_VINCULACION`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_AREAS_VINCULACION`(
+OUT pcMensajeError VARCHAR(500) -- Para mensajes de error
+)
+BEGIN
+
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no controlados
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;       
+
+	-- Obtener Areas_Vinculacion con el respectivo enlace a Facultades
+    SET vcTempMensajeError := 'Error al obtener AREAS DE VINCULACION';
+	SELECT 
+		ca_vinculaciones.codigo, ca_vinculaciones.nombre, ca_facultades.nombre AS facultad 
+	FROM 
+		ccjj.ca_vinculaciones 
+	INNER JOIN 
+		ccjj.ca_facultades 
+	ON 
+		ca_vinculaciones.cod_facultad = ca_facultades.codigo;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_AREAS_VINCULACIONES`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_AREAS_VINCULACIONES`(
+OUT pcMensajeError VARCHAR(500))
+BEGIN
+
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- Obtener las areas de vinculacion
+    SET vcTempMensajeError := 'Error al obtener las areas de vincilacion de los que puede formar parte un proyecto';
+    
+    SELECT
+		codigo,nombre
+	FROM 
+		ca_vinculaciones;
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_AULAS_POR_EDIFICIO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_AULAS_POR_EDIFICIO`(
+	-- Descripción: Obtiene las aulas asociadas a un edificio
+	-- LDeras 2015-07-04
+    IN pnCodigoEdificio INT, -- Código de edificio
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+BEGIN
+
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- Obtener las aulas
+    SET vcTempMensajeError := 'Error al obtener aulas';
+    
+    SELECT 
+		codigo, cod_edificio, numero_aula
+	FROM
+		ca_aulas
+	WHERE
+		cod_edificio = pnCodigoEdificio;
+		
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_CIUDADES`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_CIUDADES`(
+	OUT pcMensajeError VARCHAR(500) -- Para mensajes de error
+)
+BEGIN
+DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no controlados
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+
+	-- Obtener CIUDADES
+    SET vcTempMensajeError := 'Error al obtener CIUDADES';
+	SELECT
+		*
+	FROM
+		sa_ciudades;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_EDIFICIOS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_EDIFICIOS`(
+	-- Descripción: Obtiene los edificios relacionados con la carga académica
+	-- LDeras 2015-07-04
+    
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+BEGIN
+
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- Obtener los edificios
+    SET vcTempMensajeError := 'Error al obtener los edificios';
+    
+    SELECT 
+		Edificio_ID, descripcion
+	FROM
+		edificios;
+		
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_ESTADOS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_ESTADOS`(
+	-- Descripción: Obtiene los estados existentes
+    
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+BEGIN
+
+
+    DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- Obtener estados
+    SET vcTempMensajeError := 'Error al obtener estados';
+    
+    SELECT 
+		codigo, descripcion
+	FROM
+		ca_estados_carga;
+		
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_ESTUDIANTES`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_ESTUDIANTES`(
+	-- Descripción: Obtiene los estudiantes en base a los filtros parametrizados
+	-- LDeras 2015-07-03
+    
+    IN pcIdentidadEstudiante VARCHAR(500), -- Número de identidad del estudiante
+    IN pnCodigoTipoEstudiante INT, -- Código del tipo de estudiante al que se requiere realizar el cambio
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+BEGIN
+
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- Obtener los estudiantes
+    SET vcTempMensajeError := 'Error al obtener los estudiantes filtrados';
+    
+    SELECT
+		CONCAT(Primer_nombre, ' ', Segundo_nombre, ' ', Primer_apellido, ' ', Segundo_apellido) AS nombre
+	FROM persona
+    WHERE
+		pcIdentidadEstudiante IS NOT NULL  
+		AND N_identidad = pcIdentidadEstudiante
+        OR pnCodigoTipoEstudiante IS NOT NULL
+        AND pnCodigoTipoEstudiante IN
+        (
+			SELECT codigo_tipo_estudiante
+            FROM sa_estudiantes_tipos_estudiantes
+            WHERE dni_estudiante = N_identidad
+            AND fecha_registro = 
+            (
+				SELECT MAX(fecha_registro)
+				FROM sa_estudiantes_tipos_estudiantes
+				WHERE dni_estudiante = N_identidad                
+            )
+        );        
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_ESTUDIANTE_CONDUCTA`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_ESTUDIANTE_CONDUCTA`(IN `Identidad` VARCHAR(20), OUT `pcMensajeError` VARCHAR(500))
+    NO SQL
+BEGIN
+
+    DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no con	trolados
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+    
+    SET  vcTempMensajeError := 'Error al obtener las solicitudes';
+    
+    SELECT
+		concat(persona.Primer_nombre, " ", persona.Segundo_nombre, " ", persona.Primer_apellido, " ", persona.Segundo_apellido) as NOMBRE,
+    	persona.N_identidad as DNI,
+        sa_estudiantes.no_cuenta as CUENTA,
+    	sa_estudiantes.anios_inicio_estudio as ANIO
+	FROM persona
+		INNER JOIN sa_estudiantes on persona.N_identidad = sa_estudiantes.dni
+	WHERE persona.N_identidad = Identidad;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_ESTUDIANTE_CONSTANCIA`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_ESTUDIANTE_CONSTANCIA`(IN `Identidad` VARCHAR(20), IN `pcMensajeError` VARCHAR(500))
+    NO SQL
+BEGIN
+
+    DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no con	trolados
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+    
+    SET  vcTempMensajeError := 'Error al obtener las solicitudes';
+    
+    SELECT
+		concat(persona.Primer_nombre, " ", persona.Segundo_nombre, " ", persona.Primer_apellido, " ", persona.Segundo_apellido) as NOMBRE,
+    	persona.N_identidad as DNI,
+        sa_estudiantes.no_cuenta as CUENTA,
+        sa_planes_estudio.nombre as PLANESTUDIO,
+        sa_orientaciones.descripcion as ORIENTACION
+	FROM persona
+		INNER JOIN (sa_estudiantes 
+			INNER JOIN sa_planes_estudio on sa_estudiantes.cod_plan_estudio 			= sa_planes_estudio.codigo
+			INNER JOIN sa_orientaciones on sa_estudiantes.cod_orientacion = 			sa_orientaciones.codigo) 
+        	on persona.N_identidad = sa_estudiantes.dni
+     WHERE persona.N_identidad = Identidad;
+    
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_ESTUDIANTE_CONSTANCIA_EGRESADO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_ESTUDIANTE_CONSTANCIA_EGRESADO`(IN `Identidad` VARCHAR(20), OUT `pcMensajeError` VARCHAR(500))
+    NO SQL
+BEGIN
+
+    DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no con	trolados
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+    
+    SET  vcTempMensajeError := 'Error al obtener las solicitudes';
+    
+SELECT 
+	concat(persona.Primer_nombre, " ", persona.Segundo_nombre, " ", persona.Primer_apellido, " ", persona.Segundo_apellido) as NOMBRE,
+    persona.N_identidad AS DNI,
+    sa_estudiantes.no_cuenta as CUENTA,
+    sa_estudiantes.uv_acumulados as UV,
+    sa_orientaciones.descripcion as ORIENTACION,
+    sa_estudiantes.anios_inicio_estudio as ANIOESTUDIO
+FROM persona
+	INNER JOIN (sa_estudiantes INNER JOIN sa_orientaciones on sa_estudiantes.cod_orientacion = sa_orientaciones.codigo) ON persona.N_identidad = sa_estudiantes.dni
+	WHERE persona.N_identidad = Identidad;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_INFORMACION_ESTUDIANTE`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_INFORMACION_ESTUDIANTE`(
+	-- Descripción: Obtiene la informaciónd el estudiante a partir de su número de identidad
+	-- LDeras 2015-07-01
+    
+    IN pcIdentidadEstudiante VARCHAR(500), -- Número de identidad del estudiante
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+SP: BEGIN
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- Determinar si el número de identidad existe (Si el estudiante está registrado)
+    SET vcTempMensajeError := 'Error al determinar si el estudiante está registrado';
+    IF NOT EXISTS
+    (
+		SELECT N_identidad
+        FROM persona
+        WHERE N_identidad = pcIdentidadEstudiante
+    )
+    THEN
+		BEGIN
+			SET pcMensajeError := CONCAT('El estudiante con el número de identidad ',  pcIdentidadEstudiante, ' no existe. Inténtelo de nuevo.');
+            LEAVE SP;
+        END;
+	END IF;
+    
+    -- Error al obtener la información del estudiante
+    SET vcTempMensajeError := 'Error al determinar si el estudiante está registrado';
+    
+    SELECT
+		CONCAT(Primer_nombre, ' ', Segundo_nombre, ' ', Primer_apellido, ' ', Segundo_apellido) AS nombre, TIPO_ESTUDIANTE.*
+	FROM persona ,
+	(
+		SELECT descripcion AS tipo
+        FROM sa_tipos_estudiante
+        WHERE sa_tipos_estudiante.codigo IN
+        (
+        
+			SELECT codigo_tipo_estudiante
+            FROM sa_estudiantes_tipos_estudiantes
+            WHERE dni_estudiante = pcIdentidadEstudiante
+            AND fecha_registro = 
+            (
+				SELECT MAX(fecha_registro)
+				FROM sa_estudiantes_tipos_estudiantes
+				WHERE dni_estudiante = pcIdentidadEstudiante                
+            )
+        )
+	)TIPO_ESTUDIANTE
+    WHERE N_identidad = pcIdentidadEstudiante;
+	
+    
+    
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_INSTANCIAS_ACONDICIONAMIENTOS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_INSTANCIAS_ACONDICIONAMIENTOS`(
+IN codInstanciaA INT)
+BEGIN
+SELECT codigo, cod_acondicionamiento FROM ca_instancias_acondicionamientos where 
+cod_acondicionamiento=codInstanciaA;
+end$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_MENCIONES_HONORIFICAS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_MENCIONES_HONORIFICAS`(
+OUT pcMensajeError VARCHAR(500) -- Para mensajes de error
+)
+BEGIN
+
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no controlados
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;       
+
+	-- Obtener MENCION
+    SET vcTempMensajeError := 'Error al obtener MENCIONES HONORIFICAS';
+	SELECT
+		*
+	FROM
+		sa_menciones_honorificas;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_PERIODOS_ACADEMICOS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_PERIODOS_ACADEMICOS`(
+	-- Descripción: Obtiene periodos académicos de la universidad
+	-- LDeras 2015-07-03
+    
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+BEGIN
+
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- Obtener los periodos académicos
+    SET vcTempMensajeError := 'Error al obtener los periodos académicos';
+    
+    SELECT
+		codigo, nombre
+	FROM 
+		sa_periodos;
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_PLANES_ESTUDIO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_PLANES_ESTUDIO`(
+OUT pcMensajeError VARCHAR(500) -- Para mensajes de error
+)
+BEGIN
+
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no controlados
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+
+	-- Obtener PLAN ESTUDIO
+    SET vcTempMensajeError := 'Error al obtener PLAN DE ESTUDIO';
+	SELECT
+		*
+	FROM
+		sa_planes_estudio;
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_SOLICITUDES`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_SOLICITUDES`(OUT `pcMensajeError` VARCHAR(500))
+BEGIN
+
+    DECLARE vcTempMensajeError VARCHAR(500) DEFAULT '';     
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+    
+    SET  vcTempMensajeError := 'Error al obtener las solicitudes';
+    
+	SELECT 
+		sa_solicitudes.codigo AS CODIGO,
+		concat(Primer_nombre," ",Primer_apellido) AS NOMBRE,
+		sa_solicitudes.fecha_solicitud AS FECHA_SOLICITUD,
+		IF(sa_solicitudes.observaciones IS NULL, 'Niguna', sa_solicitudes.observaciones) AS OBSERVACIONES,
+        sa_estados_solicitud.descripcion AS ESTADO, 
+		sa_solicitudes.dni_estudiante AS DNI_ESTUDIANTE,
+        sa_periodos.nombre AS PERIODO,
+        sa_tipos_solicitud.nombre AS TIPO_SOLICITUD,
+        (SELECT IF((SELECT COUNT(sa_examenes_himno.cod_solicitud) FROM sa_examenes_himno WHERE sa_examenes_himno.cod_solicitud = sa_solicitudes.codigo)>=1,'Si','No')) AS APLICA_PARA_HIMNO
+	FROM sa_solicitudes LEFT JOIN sa_examenes_himno ON(sa_solicitudes.codigo = sa_examenes_himno.cod_solicitud) 
+		 INNER JOIN sa_periodos ON(sa_solicitudes.cod_periodo = sa_periodos.codigo)
+		 INNER JOIN sa_tipos_solicitud ON(sa_tipos_solicitud.codigo = sa_solicitudes.cod_tipo_solicitud)
+         INNER JOIN sa_estados_solicitud ON (sa_estados_solicitud.codigo = sa_solicitudes.cod_estado)
+		inner join persona on (persona.N_identidad = sa_solicitudes.dni_estudiante);
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_SOLICITUDES_REPORTES`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_SOLICITUDES_REPORTES`(OUT `pcMensajeError` VARCHAR(500))
+    NO SQL
+BEGIN
+
+    DECLARE vcTempMensajeError VARCHAR(500) DEFAULT '';     
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+    
+    SET  vcTempMensajeError := 'Error al obtener las solicitudes';
+    
+	SELECT 
+		sa_solicitudes.codigo as CODIGO,
+		concat(persona.Primer_nombre, " ", persona.Primer_apellido) as NOMBRE,
+    	sa_solicitudes.dni_estudiante as DNI,
+    	sa_solicitudes.fecha_solicitud as FECHA,
+        sa_solicitudes.fecha_exportacion as FECHAEXP,
+    	sa_tipos_solicitud.nombre as TIPOSOLICITUD,
+    	sa_tipos_solicitud.codigo as CODTIPOSOLICITUD 
+FROM sa_solicitudes
+	INNER JOIN persona on sa_solicitudes.dni_estudiante = 	persona.N_identidad
+    INNER JOIN sa_tipos_solicitud on sa_solicitudes.cod_tipo_solicitud = sa_tipos_solicitud.codigo
+    WHERE sa_solicitudes.cod_tipo_solicitud IN (123488, 123489, 123491,123492) OR
+     sa_solicitudes.codigo IN (SELECT sa_examenes_himno.cod_solicitud FROM sa_examenes_himno WHERE sa_examenes_himno.nota_himno BETWEEN 0 AND 100);
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_TIPOS_ESTUDIANTES`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_TIPOS_ESTUDIANTES`(
+	-- Descripción: Obtiene los tipos de estudiantes registrados
+	-- LDeras 2015-07-03
+    
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+BEGIN
+
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- Obtener los tipos de estudiantes
+    SET vcTempMensajeError := 'Error al obtener los tipos de estudiantes';
+    
+    SELECT
+		codigo, descripcion
+	FROM 
+		sa_tipos_estudiante;
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_OBTENER_TIPOS_SOLICITUDES_POR_ESTUDIANTE`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_OBTENER_TIPOS_SOLICITUDES_POR_ESTUDIANTE`(
+	-- Descripción: Obtiene todas los tipos de solicitudes a los que un estudiante (en base a si es de pre o post grado tiene derecho)
+	-- LDeras 2015-07-01
+    
+    IN pcIdentidadEstudiante VARCHAR(500), -- Número de identidad del estudiante
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+SP: BEGIN
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+    DECLARE ERROR2 VARCHAR(500); 
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- Determinar si el número de identidad existe (Si el estudiante está registrado)
+    SET vcTempMensajeError := 'Error al determinar si el estudiante está registrado';
+    IF NOT EXISTS
+    (
+		SELECT N_identidad
+        FROM persona
+        WHERE N_identidad = pcIdentidadEstudiante
+    )
+    THEN
+		BEGIN
+			SET pcMensajeError := CONCAT('El estudiante con el número de identidad ',  pcIdentidadEstudiante, ' no existe. Inténtelo de nuevo.');
+            LEAVE SP;
+        END;
+	END IF;
+    
+    START TRANSACTION;
+    
+    -- Obtener las solicitudes 
+    SET vcTempMensajeError := 'Error al obtener las solicitudes por estudiante';
+    SELECT 
+		codigo, nombre
+	FROM
+		sa_tipos_solicitud
+	WHERE
+		sa_tipos_solicitud.codigo IN 
+        (
+			SELECT cod_tipo_solicitud
+            FROM sa_tipos_solicitud_tipos_alumnos
+            WHERE sa_tipos_solicitud_tipos_alumnos.cod_tipo_alumno IN
+            (
+				SELECT codigo
+                FROM sa_tipos_estudiante
+                WHERE sa_tipos_estudiante.codigo IN
+                (
+					SELECT codigo_tipo_estudiante
+					FROM sa_estudiantes_tipos_estudiantes
+                    WHERE dni_estudiante = pcIdentidadEstudiante
+                )
+            )
+        );
+    
+    COMMIT;
+    
+    
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REALIZAR_CAMBIO_TIPO_ESTUDIANTE`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REALIZAR_CAMBIO_TIPO_ESTUDIANTE`(
+	-- Descripción: Realiza un cambio de tipo de estudiante de un estudiante.
+    -- Por ejemplo, puede realizar el cambio de un estudiante de pre-gado que ahora es de post-grado
+	-- LDeras 2015-07-03
+    
+    IN pcIdentidadEstudiante VARCHAR(500), -- Número de identidad del estudiante
+    IN pnCodigoTipoEstudiante INT, -- Código del tipo de estudiante al que se requiere realizar el cambio
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+SP: BEGIN
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+    DECLARE vnCodigoTipoEstudiante INT; -- Variable para almacenar el código de tipo de estudiante actual
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- Determinar si el número de identidad existe (Si el estudiante está registrado)
+    SET vcTempMensajeError := 'Error al determinar si el estudiante está registrado';
+    IF NOT EXISTS
+    (
+		SELECT N_identidad
+        FROM persona
+        WHERE N_identidad = pcIdentidadEstudiante
+    )
+    THEN
+		BEGIN
+			SET pcMensajeError := CONCAT('El estudiante con el número de identidad ',  pcIdentidadEstudiante, ' no existe. Inténtelo de nuevo.');
+            LEAVE SP;
+        END;
+	END IF;
+    
+    -- Determinar si el tipo de estudiante existe
+    SET vcTempMensajeError := 'Error al determinar si el tipo de estudiante existe';
+    IF NOT EXISTS
+    (
+		SELECT codigo
+        FROM sa_tipos_estudiante
+        WHERE codigo = pnCodigoTipoEstudiante
+    )
+    THEN
+		BEGIN
+			SET pcMensajeError := CONCAT('El tipo de estudiante que seleccionó no existe');
+            LEAVE SP;
+        END;
+	END IF;    
+    
+    -- Obtener el código de tipo de estudiante del estudiante
+    SET vcTempMensajeError := 'Error al obtener el código actual de tipo de estudiante';
+    SELECT
+		codigo_tipo_estudiante
+	INTO
+		vnCodigoTipoEstudiante
+	FROM 
+		sa_estudiantes_tipos_estudiantes
+	WHERE
+		dni_estudiante  = pcIdentidadEstudiante
+	ORDER by	
+		fecha_registro DESC
+	LIMIT 1;
+    
+    -- Determinar si los tipos de estudiante son iguales
+    IF vnCodigoTipoEstudiante = pnCodigoTipoEstudiante THEN
+    
+		SET pcMensajeError := 'No puede realizar un cambio al mismo tipo de estudiante.';
+        LEAVE SP;
+    
+    END IF;
+    
+    START TRANSACTION;
+    
+    -- Realizar el cambio de tipo de estudiante
+    SET vcTempMensajeError := 'Error al realizar el cambio de tipo de estudiante';
+    INSERT INTO sa_estudiantes_tipos_estudiantes(codigo_tipo_estudiante, dni_estudiante, fecha_registro)
+    VALUES(pnCodigoTipoEstudiante, pcIdentidadEstudiante, NOW());
+    
+    
+    COMMIT;
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_ACONDICIONAMIENTOS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_ACONDICIONAMIENTOS`(
+	IN pcnombre VARCHAR(50), -- Almacena el nombre del acondicionamiento
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+)
+SP:BEGIN
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar posibles errores no controlados de servidor
+	DECLARE vnContadorAcondicionamiento INT DEFAULT 0; -- Variable para determinar si el nombre del acondicionamiento ya estÃ¡ siendo usado
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+		ROLLBACK;
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    END;    
+     -- Determinar si el nombre del acondicionamiento ya estÃ¡ siendo usado
+    SET vcTempMensajeError := 'Error al seleccionar COUNT de nombre del acondicionamiento';
+	SELECT
+		COUNT(nombre)
+	INTO
+		vnContadorAcondicionamiento
+	FROM
+		ca_acondicionamientos
+	WHERE
+		nombre = pcnombre;
+	-- El nombre del acondicionamiento ya estÃ¡ siendo usado
+	IF vnContadorAcondicionamiento > 0 then
+    
+		SET pcMensajeError := 'El nombre del acondicionamiento ya esta¡ siendo usado, intentelo de nuevo.';
+        LEAVE SP;
+    END IF;
+    SET vcTempMensajeError := 'Error al crear el registro en la tabla ca_acondicionamientos';
+    INSERT INTO ca_acondicionamientos (nombre)
+    VALUES (pcnombre);    
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_CIUDAD`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_CIUDAD`(
+    IN pcnombre VARCHAR(50), -- Almacena el nombre de la ciudad
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+    -- Descripción: Registra una ciudad 
+	-- ClaudioPaz
+)
+SP:BEGIN
+ 
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar posibles errores no controlados de servidor
+	DECLARE vnContadorSolicitud INT DEFAULT 0; -- Variable determina si el nombre ya esta introducido
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+    
+     -- Determinar si el nombre de la ciudad ya está siendo usado
+    SET vcTempMensajeError := 'Error al seleccionar COUNT de nombre de ciudad';
+	SELECT
+		COUNT(nombre)
+	INTO
+		vnContadorSolicitud
+	FROM
+		sa_ciudades
+	WHERE
+		nombre = pcnombre;
+        
+        
+	-- Ya hay una ciudad con ese nombre
+	IF vnContadorSolicitud > 0 then
+    
+		SET pcMensajeError := 'Esta ciudad ya esta registrada, intenta otra';
+        LEAVE SP;
+    
+    END IF;
+    
+    SET vcTempMensajeError := 'Error al crear el registro';
+    INSERT INTO sa_ciudades (nombre)
+    VALUES (pcnombre);    
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_DOCENTE`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_DOCENTE`(
+	-- Descripción: Registra un docente 
+	-- LDeras 2015-07-03
+    
+    IN pcNumeroIdentidad VARCHAR(100), -- Número de identidad
+    IN pcPrimerNombre VARCHAR(200), -- Primer nombre 
+    IN pcSegundoNombre VARCHAR(200), -- Segundo nombre 
+    IN pcPrimerApellido VARCHAR(200), -- Primer apellido
+    IN pcSegundoApellido VARCHAR(200), -- Segundo apellido
+    IN pdFechaNacimiento VARCHAR(200), -- Fecha de nacimiento 
+    IN pcSexo CHAR(1), 				   -- Sexo 
+    IN pcDireccion VARCHAR(100), 	   -- Dirección
+    IN pcEstadoCivil VARCHAR(100), 	   -- Estado civil
+    IN pcNacionalidad VARCHAR(100),	   -- Nacionalidad
+    IN pcCorreo VARCHAR(100), 		   -- Correo
+    IN pnNumeroEmpleado INT,		   -- Número de empleado
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+SP: BEGIN
+
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+    DECLARE error2 VARCHAR(500);
+    -- TODO: Debe de haber una tabla para esto
+    DECLARE vcCodigoEstadoEmpleado VARCHAR(20) DEFAULT 'Activo';
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    -- Determinar si el número de identidad existe 
+    SET vcTempMensajeError := 'Error al determinar si la persona con número de identidad ya existe';
+    IF EXISTS
+    (
+		SELECT N_identidad
+        FROM persona
+        WHERE N_identidad = pcNumeroIdentidad
+    )
+    THEN
+		BEGIN
+			SET pcMensajeError := CONCAT('Ya existe una persona con el número de identidad  ',  pcNumeroIdentidad, '. Inténtelo de nuevo.');
+            LEAVE SP;
+        END;
+	END IF;    
+    
+    START TRANSACTION;
+    
+    
+	-- Insertar en la tabla persona
+    SET vcTempMensajeError := 'Error al insertar en la tabla persona';
+    INSERT INTO persona (N_identidad, Primer_nombre, Segundo_nombre, Primer_apellido, Segundo_apellido, Fecha_nacimiento,
+						Sexo, Direccion, Correo_electronico, Estado_Civil, Nacionalidad)
+	VALUES 	(pcNumeroIdentidad, pcPrimerNombre, pcSegundoNombre, pcPrimerApellido, pcSegundoApellido, 
+			pdFechaNacimiento, pcSexo, pcDireccion, pcCorreo, pcEstadoCivil, pcNacionalidad);    
+            
+	-- Determinar si el número de empleado 
+    SET vcTempMensajeError := 'Error al determinar si el número de empleado ya se está usando';
+    
+    IF EXISTS
+    (
+		SELECT No_Empleado
+        FROM empleado
+        WHERE No_Empleado = pnNumeroEmpleado
+    )
+    THEN
+		BEGIN
+			SET pcMensajeError := 'El número de empleado ya está siendo usado. Inténtelo de nuevo.';
+            LEAVE SP;
+        END;
+	END IF;
+            
+
+	-- Insertar en la empleado
+    SET vcTempMensajeError := 'Error al insertar empleado';            
+	INSERT INTO empleado (No_Empleado, N_identidad, Id_departamento, Fecha_ingreso, Observacion, estado_empleado)
+	VALUES (pnNumeroEmpleado, pcNumeroIdentidad,'2', CURDATE(),"ninguna", 1);
+    
+    -- TODO: No hay una distinción entre empleados. ¿Tabla de tipos de empleados?
+	
+    
+    COMMIT;
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_ESTUDIANTE`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_ESTUDIANTE`(
+-- By Carlos Salgado, Luis Deras, Axel Herrera.
+	IN pc_N_identidad VARCHAR(20), -- Llave primaria del estudiante
+	IN pcPrimer_nombre VARCHAR(20), -- Primer nombre del estudiante
+	IN pcSegundo_nombre VARCHAR(20),  -- Segundo nombre del estudiante
+    IN pcPrimer_apellido VARCHAR(45), -- Primer apellido del usuario
+    IN pcSegundo_apellido VARCHAR(20), -- Segundo apellido del estudiante
+	IN pdFecha_nacimiento DATE, 	-- Fecha de nacimiento del estudiante
+	IN pcSexo VARCHAR(1), -- Sexo del estudiante
+    -- IN pcdni CHAR(13), -- Relacion del estudiante-persona
+	IN pnCiudadOrigen INT, -- Referencia a la ciudad de Origen
+    IN pnResidenciaActual INT, -- Nombre de la ciudad actual en que mora el estudiante
+    IN pcNumeroCuenta VARCHAR(11), -- Numero de cuenta del estudiante
+    IN pccorreo VARCHAR(200), -- Correo del estudiane
+    IN pccod_tipo_estudiante INT, -- Codigo del tipo de estudiante   
+	IN pccod_plan_estudio INT, -- Codigo del paln de estudio de estudiante   
+    IN pnuv_acumulados INT, -- UV aculadas por el estudiante
+    IN pnanios_inicio_estudio INT, -- Años de estudio en la UNAH
+    IN pnanios_final_estudio INT,
+    IN pnindice_academico DECIMAL, -- Indice global obtenido por el estudiante
+    IN pccod_mencion INT,
+    IN pnOrientacionEstudiante INT, -- Orientación del estudiante
+    IN pcDireccion VARCHAR(200),
+    IN pcEstadoCivil VARCHAR(100),
+    IN pcNacionalidad VARCHAR(100),
+    IN pcTelefono VARCHAR(200),
+    IN pnCodigoTitulo INT,
+    OUT pcMensajeError VARCHAR(500) -- Parámetro para mensajes de error
+)
+SP:BEGIN
+
+    DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar ERRORES DE servidor
+    DECLARE vnContadorN_identidad INT DEFAULT 0; -- Variable para determinar si ya hay un PERSONAJE
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+     -- Determinar si el ID del PERSONAL ya existe
+    SET vcTempMensajeError := 'Error al seleccionar el id del estudiante';
+    
+    SELECT 
+		COUNT(N_identidad)
+	INTO
+		vnContadorN_identidad
+
+	FROM
+		persona
+	WHERE
+		N_identidad = pc_N_identidad;
+        
+	IF vnContadorN_identidad > 0 THEN
+    
+		SET pcMensajeError := 'Ya hay un sujeto con ese nombre, inténtelo de nuevo';
+		LEAVE SP;
+    
+    END IF;
+    
+    START TRANSACTION;
+    
+     -- Registrar persona
+    SET vcTempMensajeError := 'Error al insertar nuevo persona';
+    INSERT INTO persona(N_identidad, Primer_nombre, Segundo_nombre,Primer_apellido, Segundo_apellido, Fecha_nacimiento, Sexo, Direccion, Correo_electronico, Estado_Civil, Nacionalidad)
+    VALUES(pc_N_identidad, pcPrimer_nombre,pcSegundo_nombre,pcPrimer_apellido,pcSegundo_apellido, pdFecha_nacimiento,pcSexo, pcDireccion, pccorreo, pcEstadoCivil, pcNacionalidad);
+	
+    -- Registrar Estudiante
+    SET vcTempMensajeError := 'Error al insertar nuevo estudiante';
+    INSERT INTO sa_estudiantes(dni,anios_inicio_estudio,indice_academico,uv_acumulados,cod_plan_estudio,cod_ciudad_origen, no_cuenta, 
+				fecha_registro, cod_orientacion, cod_residencia_actual, anios_final_estudio)
+    VALUES (pc_N_identidad,pnanios_inicio_estudio,pnindice_academico,pnuv_acumulados,pccod_plan_estudio,pnCiudadOrigen,pcNumeroCuenta,
+				CURDATE(),pnOrientacionEstudiante, pnResidenciaActual, pnanios_final_estudio);
+		
+	-- Registrar tipo de estudiante
+    SET vcTempMensajeError := 'Error al insertar el tipo de estudiante';
+    INSERT INTO sa_estudiantes_tipos_estudiantes(codigo_tipo_estudiante, dni_estudiante, fecha_registro)
+    VALUES(pccod_tipo_estudiante, pc_N_identidad, NOW());
+    
+       -- Registrar telefono estudiante
+    SET vcTempMensajeError := 'Error al insertar nuevo telefono estudiante';
+    INSERT INTO telefono(Numero,N_identidad)
+    VALUES (pcTelefono,pc_N_identidad);
+    
+       -- Registrar correo estudiante
+    SET vcTempMensajeError := 'Error al insertar nuevo correo estudiante';
+    INSERT INTO sa_estudiantes_correos(dni_estudiante,correo)
+    VALUES(pc_N_identidad,pccorreo);
+    
+       -- Registrar menciones 
+    SET vcTempMensajeError := 'Error al insertar nuevo mencion honorifica estudiante';
+    INSERT INTO sa_estudiantes_menciones_honorificas(dni_estudiante,cod_mencion)
+    VALUES(pc_N_identidad,pccod_mencion);
+    
+    COMMIT;
+    
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_FACULTADES`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_FACULTADES`(
+IN pcnombre VARCHAR(50), -- Almacena el nombre de la facultad
+OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+)
+SP:BEGIN
+DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar posibles errores no controlados de servidor
+DECLARE vnContadorFacultad INT DEFAULT 0; -- Variable para determinar si el nombre de la facultad ya estÃ¡ siendo usado    
+DECLARE EXIT HANDLER FOR SQLEXCEPTION
+BEGIN    
+ROLLBACK;    
+SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+SET pcMensajeError := vcTempMensajeError;    
+END;        
+-- Determinar si el nombre de la facultad ya estÃ¡ siendo usado
+SET vcTempMensajeError := 'Error al seleccionar COUNT de nombre de la facultad';
+SELECT
+COUNT(nombre)
+INTO
+vnContadorFacultad
+FROM
+ca_facultades
+WHERE
+nombre = pcnombre;        
+-- El nombre de la facultad ya estÃ¡ siendo usado
+IF vnContadorFacultad > 0 then    
+SET pcMensajeError := 'El nombre de la facultad ya esta¡ siendo usado, intentelo de nuevo.';
+LEAVE SP;    
+END IF;    
+SET vcTempMensajeError := 'Error al crear el registro en la tabla ca_facultades';
+INSERT INTO ca_facultades (nombre)
+VALUES (pcnombre);    
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_INSTANCIA_ACONDICIONAMIENTO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_INSTANCIA_ACONDICIONAMIENTO`(
+	IN pcnombre VARCHAR(50), -- Almacena el nombre de la instancia_acondicionamiento
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+)
+SP:BEGIN
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar posibles errores no controlados de servidor
+	DECLARE vnContadorInstanciaAcondicionamiento INT DEFAULT 0; -- Variable para determinar si el nombre de la instancia_acondicionamiento ya estÃ¡ siendo usado
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+		ROLLBACK;
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    END;    
+     -- Determinar si el nombre de la  instancia_acondicionamiento ya estÃ¡ siendo usado
+    SET vcTempMensajeError := 'Error al seleccionar COUNT de nombre de la instancia_acondicionamiento';
+	SELECT
+		COUNT(cod_acondicionamiento)
+	INTO
+		vnContadorInstanciaAcondicionamiento
+	FROM
+		ca_instancias_acondicionamientos
+	WHERE
+		cod_acondicionamiento = pcnombre;
+    
+    SET vcTempMensajeError := 'Error al crear el registro en la tabla ca_instancias_acondicionamientos';
+    INSERT INTO ca_instancias_acondicionamientos (cod_acondicionamiento)
+    VALUES (pcnombre);    
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_MENCION_HONORIFICA`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_MENCION_HONORIFICA`(
+    IN pcDescripcion VARCHAR(50), -- Almacena el nombre de la mencion honorifica
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+    -- Descripción: Registra una nueva mencion Honorifica
+	-- ClaudioPaz
+)
+SP:BEGIN
+ 
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar posibles errores no controlados de servidor
+	DECLARE vnContadorSolicitud INT DEFAULT 0; -- Variable determina si el nombre ya esta introducido
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+    
+     -- Determinar si el nombre mencion ya está siendo usado
+    SET vcTempMensajeError := 'Error al seleccionar COUNT de nombre de mencion';
+	SELECT
+		COUNT(descripcion)
+	INTO
+		vnContadorSolicitud
+	FROM
+		sa_menciones_honorificas
+	WHERE
+		descripcion = pcDescripcion;
+        
+        
+	-- Ya hay una mencion con ese nombre
+	IF vnContadorSolicitud > 0 then
+    
+		SET pcMensajeError := 'Esta mencion ya esta registrada, intenta otra';
+        LEAVE SP;
+    
+    END IF;
+    
+    SET vcTempMensajeError := 'Error al crear el registro';
+    INSERT INTO sa_menciones_honorificas (descripcion)
+    VALUES (pcDescripcion);    
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_ORIENTACIONES`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_ORIENTACIONES`(
+    IN pcDescripcion VARCHAR(50), -- Almacena el nombre de la orientacion
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+    -- Descripción: Registra una nueva Oreitnacione
+	-- ClaudioPaz
+)
+SP:BEGIN
+ 
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar posibles errores no controlados de servidor
+	DECLARE vnContadorSolicitud INT DEFAULT 0; -- Variable determina si el nombre ya esta introducido
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+    
+     -- Determinar si el orientacion ya está siendo usado
+    SET vcTempMensajeError := 'Error al seleccionar COUNT de nombre de la orientacion';
+	SELECT
+		COUNT(descripcion)
+	INTO
+		vnContadorSolicitud
+	FROM
+		sa_orientaciones
+	WHERE
+		descripcion = pcDescripcion;
+        
+        
+	-- Ya hay una oreitnacion con ese nombre
+	IF vnContadorSolicitud > 0 then
+    
+		SET pcMensajeError := 'Esta orientacion ya esta registrada, intenta otra';
+        LEAVE SP;
+    
+    END IF;
+    
+    SET vcTempMensajeError := 'Error al crear el registro';
+    INSERT INTO sa_orientaciones (descripcion)
+    VALUES (pcDescripcion);    
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_PERIODO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_PERIODO`(
+    IN pcnombre VARCHAR(50), -- Almacena el nombre del periodo
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+    -- Descripción: Registra un periodo
+	-- ClaudioPaz
+)
+SP:BEGIN
+ 
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar posibles errores no controlados de servidor
+	DECLARE vnContadorSolicitud INT DEFAULT 0; -- Variable determina si el nombre ya esta introducido
+    DECLARE vnCodigoPeriodo INT;
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+    
+     -- Determinar si el nombre del periodo ya está siendo usado
+    SET vcTempMensajeError := 'Error al seleccionar COUNT de nombre del periodo';
+	SELECT
+		COUNT(nombre)
+	INTO
+		vnContadorSolicitud
+	FROM
+		sa_periodos
+	WHERE
+		nombre = pcnombre;
+        
+        
+	-- Ya hay un periodo con ese nombre
+	IF vnContadorSolicitud > 0 then
+    
+		SET pcMensajeError := 'Este periodo ya esta registrado, intenta otra';
+        LEAVE SP;
+    
+    END IF;
+    
+    SELECT 
+		IFNULL(MAX(codigo) + 1, 1)
+	INTO
+		vnCodigoPeriodo
+	FROM 
+		sa_periodos;    
+    
+    SET vcTempMensajeError := 'Error al crear el registro';
+    INSERT INTO sa_periodos (codigo, nombre)
+    VALUES (vnCodigoPeriodo, pcnombre);    
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_PERMISO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_PERMISO`(
+    IN pcnombre VARCHAR(50), -- Almacena el nombre del periodo
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+
+    -- Descripción: Registra un periodo
+
+
+)
+SP:BEGIN
+ 
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar posibles errores no controlados de servidor
+	DECLARE vnContadorSolicitud INT DEFAULT 0; -- Variable determina si el nombre ya esta introducido
+    DECLARE vnCodigoPeriodo INT;
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+    
+     -- Determinar si el nombre del periodo ya está siendo usado
+    SET vcTempMensajeError := 'Error al seleccionar COUNT  el nombre del tipo de permiso';
+	SELECT
+		COUNT(tipo_permiso)
+	INTO
+		vnContadorSolicitud
+	FROM
+		tipodepermiso
+	WHERE
+		tipo_permiso = pcnombre;
+        
+        
+	-- Ya hay un permiso  con ese nombre
+	IF vnContadorSolicitud > 0 then
+    
+		SET pcMensajeError := 'Este periodo ya esta registrado, intenta otra';
+        LEAVE SP;
+    
+    END IF;
+    
+    SELECT 
+		IFNULL(MAX(id_tipo_permiso) + 1, 1)
+	INTO
+		vnCodigoPeriodo
+	FROM 
+		tipodepermiso;    
+    
+    SET vcTempMensajeError := 'Error al crear el registro';
+    INSERT INTO tipodepermiso (id_tipo_permiso,tipo_permiso)
+    VALUES (vnCodigoPeriodo, pcnombre);    
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_PLAN_ESTUDIO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_PLAN_ESTUDIO`(
+    IN pcnombre VARCHAR(50), -- Almacena el nombre de el plan de estudio
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+)
+SP: BEGIN
+ 
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar posibles errores no controlados de servidor
+	DECLARE vnContadorSolicitud INT DEFAULT 0; -- Variable determina si el nombre ya esta introducido
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+    
+     -- Determinar si el nombre del plan ya esta siendo usado
+    SET vcTempMensajeError := 'Error al seleccionar COUNT del plan';
+	SELECT
+		COUNT(nombre)
+	INTO
+		vnContadorSolicitud
+	FROM
+		sa_planes_estudio
+	WHERE
+		nombre = pcnombre;
+        
+        
+	-- Ya hay un plan con ese nombre
+	IF vnContadorSolicitud > 0 then
+    
+		SET pcMensajeError := 'Ya hay un plan con ese nombre, intente otro';
+        LEAVE SP;
+    
+    END IF;
+    
+    SET vcTempMensajeError := 'Error al crear el registro.';
+    INSERT INTO sa_planes_estudio (nombre)
+    VALUES (pcnombre);    
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_PROYECTO`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_PROYECTO`(
+    IN pcCod_Area INT,IN pcCod_Vinculacion INT,IN pcNombre VARCHAR(100),OUT pcMensajeError VARCHAR(500))
+BEGIN
+
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+      
+    SET vcTempMensajeError := 'Error al registrar el proyecto';
+    
+    
+        INSERT INTO ca_proyectos(cod_area,cod_vinculacion,nombre)
+		VALUES 	(pcCod_Area,pcCod_Vinculacion,pcNombre);
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_SOLICITUD`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_SOLICITUD`(IN `pcIdentidadEstudiante` VARCHAR(500), IN `pcTipoSolicitud` INT, IN `pnCodigoPeriodo` INT, IN `pbSolicitudEsDeHimno` BOOLEAN, IN `pdFechaSolicitudExamen` DATE, OUT `pcMensajeError` VARCHAR(1000))
+SP: BEGIN
+
+	DECLARE vcTempMensajeError VARCHAR(1000);     DECLARE vnCodigoEstadoSolicitudActiva INT DEFAULT 1;     DECLARE vnCodigoNuevoRegistroSolicitud INT;     
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+        SET vcTempMensajeError := 'Error al determinar si el estudiante está registrado';
+    IF NOT EXISTS
+    (
+		SELECT N_identidad
+        FROM persona
+        WHERE N_identidad = pcIdentidadEstudiante
+    )
+    THEN
+		BEGIN
+			SET pcMensajeError := CONCAT('El estudiante con el número de identidad ',  pcIdentidadEstudiante, ' no existe. Inténtelo de nuevo.');
+            LEAVE SP;
+        END;
+	END IF;
+	
+    START TRANSACTION;
+    
+        SET vcTempMensajeError := 'Error al registrar la solicitud ';
+    
+    INSERT INTO sa_solicitudes(fecha_solicitud, dni_estudiante, cod_periodo, cod_estado, cod_tipo_solicitud)
+    VALUES (CURDATE(), pcIdentidadEstudiante, pnCodigoPeriodo, vnCodigoEstadoSolicitudActiva, pcTipoSolicitud);
+    
+    SET vnCodigoNuevoRegistroSolicitud := LAST_INSERT_ID();
+    SET pbSolicitudEsDeHimno := (SELECT IF(COUNT(codigo)>=1,0,1) FROM sa_tipos_solicitud WHERE sa_tipos_solicitud.nombre like '%himno%' AND codigo = pcTipoSolicitud);
+    
+    IF pbSolicitudEsDeHimno = 0 THEN
+
+				SET vcTempMensajeError := 'Error al registrar el examen de himno';
+		INSERT INTO sa_examenes_himno(cod_solicitud, fecha_examen_himno, fecha_solicitud)
+		VALUES(vnCodigoNuevoRegistroSolicitud, pdFechaSolicitudExamen, CURDATE());
+    
+    END IF;
+    
+
+    COMMIT;
+    
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_TIPO_DE_ESTUDIANTE`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_TIPO_DE_ESTUDIANTE`(
+    IN pcnombre VARCHAR(50), -- Almacena el nombre del tipo de estudiante
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+
+)
+SP:BEGIN
+ 
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar posibles errores no controlados de servidor
+	DECLARE vnContadorSolicitud INT DEFAULT 0; -- Variable determina si el nombre ya esta introducido
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+    
+     -- Determinar si el nombre del tipo de estudiante ya está siendo usado
+    SET vcTempMensajeError := 'Error al seleccionar COUNT de tipo de estudiante';
+	SELECT
+		COUNT(descripcion)
+	INTO
+		vnContadorSolicitud
+	FROM
+		sa_tipos_estudiante
+	WHERE
+		descripcion = pcnombre;
+        
+        
+	-- Ya hay un tipo de estudiante con ese nombre
+	IF vnContadorSolicitud > 0 then
+    
+		SET pcMensajeError := 'Este tipo de estudiante ya está registrado, intente con uno nuevo';
+        LEAVE SP;
+    
+    END IF;
+    
+    SET vcTempMensajeError := 'Error al crear el registro';
+    INSERT INTO sa_tipos_estudiante (descripcion)
+    VALUES (pcnombre);    
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REGISTRAR_TIPO_SOLICITUD`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REGISTRAR_TIPO_SOLICITUD`(
+	IN pcnombre VARCHAR(50), -- Almacena el nombre de la solicitud
+    IN pnCodigoTipoEstudiante INT, -- Código que determina para qué tipos de estudiantes será la solicitud
+    OUT pcMensajeError VARCHAR(500) -- Mensaje mostrado el sistema
+)
+SP:BEGIN
+ 
+	DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para almacenar posibles errores no controlados de servidor
+	DECLARE vnContadorSolicitud INT DEFAULT 0; -- Variable para determinar si el nombre de solicitud ya está siendo usado
+    DECLARE vnNuevoCodigoSolicitud INT; -- Variable para almacenar el nuevo código que resulta para la tabla de tipos solicitudes
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;    
+    
+     -- Determinar si el nombre de solicitud ya está siendo usado
+    SET vcTempMensajeError := 'Error al seleccionar COUNT de nombre de usuario';
+	SELECT
+		COUNT(nombre)
+	INTO
+		vnContadorSolicitud
+	FROM
+		sa_tipos_solicitud
+	WHERE
+		nombre = pcnombre;
+        
+        
+	-- El nombre de solicitud ya está siendo usado
+	IF vnContadorSolicitud > 0 then
+    
+		SET pcMensajeError := 'El nombre de solicitud ya está siendo usado, inténtelo de nuevo.';
+        LEAVE SP;
+    
+    END IF;
+    
+    START TRANSACTION;
+    
+    SET vcTempMensajeError := 'Error al crear el registro en la tabla sa_tipos_solicitud';
+    INSERT INTO sa_tipos_solicitud (nombre)
+    VALUES (pcnombre);
+    
+    SET vcTempMensajeError := 'Error al obtener el código del tipo de solicitud';
+    SET vnNuevoCodigoSolicitud := LAST_INSERT_ID();
+    
+    SET vcTempMensajeError := 'Error al insertar en la tabla SA_TIPOS_SOLICITUD_TIPOS_ALUMNOS';
+    INSERT INTO sa_tipos_solicitud_tipos_alumnos(cod_tipo_solicitud,cod_tipo_alumno)
+    VALUES(vnNuevoCodigoSolicitud, pnCodigoTipoEstudiante);
+    
+    COMMIT;
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REPORTE_CARGA_ACADEMICA`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REPORTE_CARGA_ACADEMICA`(IN `pcAnio` YEAR, IN `pcPeriodo` INT)
+SELECT
+		ca.codigo,ca.cod_periodo,p.Primer_nombre, p.Primer_apellido,
+        clases.Clase,cu.cod_seccion,ca_secciones.hora_inicio,hora_fin 
+	FROM
+		ca_cargas_academicas ca
+        inner join persona p on ca.dni_empleado = p.N_identidad
+        inner join ca_cursos cu on ca.codigo = cod_carga
+        inner join clases on clases.ID_Clases = cu.cod_asignatura
+        inner join ca_secciones on ca_secciones.codigo = cu.cod_seccion
+	where
+		ca.anio = pcAnio and pcPeriodo = ca.cod_periodo$$
+
+DROP PROCEDURE IF EXISTS `SP_REPORTE_PROYECTOS`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REPORTE_PROYECTOS`(
+	OUT pcMensajeError VARCHAR(500) -- Para mensajes de error
+)
+BEGIN
+
+    DECLARE vcTempMensajeError VARCHAR(500) DEFAULT ''; -- Variable para posibles errores no con	trolados
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+    
+		ROLLBACK;
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;  
+    
+    
+    SELECT 
+		PROYECTOS.codigo AS CODIGO_PROYECTO,
+		PROYECTOS.nombre AS PROYECTO_NOMBRE,
+        VINCULACIONES.nombre AS VINCULACION_NOMBRE,
+        AREAS.nombre AS NOMBRE_AREA,
+        CONCAT(Primer_nombre, ' ', Primer_apellido) AS NOMBRE_COORDINADOR
+    FROM    
+		ca_proyectos PROYECTOS INNER JOIN ca_vinculaciones VINCULACIONES ON(PROYECTOS.cod_vinculacion =  VINCULACIONES.codigo)
+        INNER JOIN ca_areas AREAS ON(AREAS.codigo = PROYECTOS.cod_area)
+        INNER JOIN ca_empleados_proyectos EMPLEADOS_PROYECTOS ON (EMPLEADOS_PROYECTOS.cod_proyecto = PROYECTOS.codigo)
+        INNER JOIN ca_roles_proyecto EMPLEADOS_ROLES_PROYECTO ON (EMPLEADOS_PROYECTOS.cod_rol_proyecto = EMPLEADOS_ROLES_PROYECTO.codigo)
+		INNER JOIN persona PERSONA ON (PERSONA.N_identidad = EMPLEADOS_PROYECTOS.dni_empleado);
+        
+		
+    
+    
+
+END$$
+
+DROP PROCEDURE IF EXISTS `SP_REPROGRAMAR_SOLICITUD`$$
+CREATE DEFINER=`ddvderecho`@`localhost` PROCEDURE `SP_REPROGRAMAR_SOLICITUD`(
+	IN pnCodigoSolicitud INT, -- Código de la solicitud a reprogramar
+    IN pdFechaNuevaSolicitud DATE, -- Fecha de la nueva solicitud
+    IN pdFechaNuevaHimno DATE, -- Fecha de aplicación para examen del himno en caso de que la solicitud anterior aplique para himno
+    OUT pcMensajeError VARCHAR(1000) -- Parámetro para los mensajes de error
+)
+SP: BEGIN
+
+	DECLARE vcTempMensajeError VARCHAR(1000); -- Variable para anteponer los posibles mensajes de error
+    DECLARE vnCodigoSolicitudActiva INT DEFAULT 1; -- Código del estado de solicitud DESACTIVADA
+    DECLARE vnCodigoSolicitudDesactiva INT DEFAULT 2; -- Código del estado de solicitud DESACTIVADA
+    
+    DECLARE vnCodigoNuevaSolicitud INT; -- Variable para almacenar el código de la nueva solicitud generada
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+		
+		ROLLBACK;
+    
+        SET vcTempMensajeError := CONCAT('Error: ', vcTempMensajeError);
+        SET pcMensajeError := vcTempMensajeError;
+    
+    END;
+    
+    START TRANSACTION;
+    
+    -- Desactivar solicitud
+    SET vcTempMensajeError := 'Al actualizar el estado de la solicitud';
+    UPDATE sa_solicitudes
+    SET cod_estado = vnCodigoSolicitudDesactiva
+    WHERE codigo = pnCodigoSolicitud;
+    
+    -- Registrar nueva solicitud
+    SET vcTempMensajeError := 'Al registrar la nueva solicitud';
+    INSERT INTO sa_solicitudes(fecha_solicitud, dni_estudiante, cod_periodo, cod_tipo_solicitud, cod_solicitud_padre, cod_estado)    
+	SELECT NOW(), dni_estudiante, cod_periodo, cod_tipo_solicitud, pnCodigoSolicitud, vnCodigoSolicitudActiva
+	FROM sa_solicitudes
+	WHERE codigo = pnCodigoSolicitud;
+    
+    SET vnCodigoNuevaSolicitud := LAST_INSERT_ID();
+    
+    -- Determinar si aplica para el himno
+    IF EXISTS
+    (
+		SELECT cod_solicitud
+		FROM sa_examenes_himno
+		WHERE cod_solicitud = pnCodigoSolicitud
+    )
+    THEN
+		BEGIN
+        
+			-- Registrar nueva solicitud
+			SET vcTempMensajeError := 'Al registrar examen del himno para la solicitud';
+            
+			INSERT INTO sa_examenes_himno(fecha_solicitud, cod_solicitud, fecha_examen_himno)
+            VALUES(CURDATE(), vnCodigoNuevaSolicitud, pdFechaNuevaHimno);
+            
+        END;
+	END IF;	
+    
+    COMMIT;
+    
+    
+    
+END$$
+
+--
+-- Funciones
+--
+DROP FUNCTION IF EXISTS `sp_get_prioridad`$$
+CREATE DEFINER=`ddvderecho`@`localhost` FUNCTION `sp_get_prioridad`(`numFolio_` VARCHAR(25)) RETURNS int(11)
+BEGIN
+   DECLARE pri INTEGER;
+   SELECT Prioridad INTO pri FROM folios WHERE NroFolio = numFolio_;
+   RETURN pri;
+END$$
+
+DROP FUNCTION IF EXISTS `udf_Decrypt_derecho`$$
+CREATE DEFINER=`ddvderecho`@`localhost` FUNCTION `udf_Decrypt_derecho`(`var` VARBINARY(150)) RETURNS varchar(25) CHARSET latin1
+BEGIN
+   DECLARE ret varchar(25);
+   SET ret = cast(AES_DECRYPT(unhex(var), 'Der3ch0') as char);
+   RETURN ret;
+END$$
+
+DROP FUNCTION IF EXISTS `udf_Encrypt_derecho`$$
+CREATE DEFINER=`ddvderecho`@`localhost` FUNCTION `udf_Encrypt_derecho`(`var` VARCHAR(25)) RETURNS varchar(150) CHARSET latin1
+BEGIN  
+   DECLARE ret BLOB;
+   SET ret = hex(AES_ENCRYPT(var, 'Der3ch0'));
+   RETURN ret;
+END$$
+
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -25,6 +4635,7 @@ SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 -- Estructura de tabla para la tabla `actividades`
 --
 
+DROP TABLE IF EXISTS `actividades`;
 CREATE TABLE IF NOT EXISTS `actividades` (
   `id_actividad` int(11) NOT NULL auto_increment,
   `id_indicador` int(11) NOT NULL,
@@ -38,7 +4649,7 @@ CREATE TABLE IF NOT EXISTS `actividades` (
   `fecha_fin` date NOT NULL,
   PRIMARY KEY  (`id_actividad`),
   KEY `id_indicador` (`id_indicador`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=259 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=261 ;
 
 --
 -- Volcar la base de datos para la tabla `actividades`
@@ -288,7 +4899,8 @@ INSERT INTO `actividades` (`id_actividad`, `id_indicador`, `descripcion`, `corre
 (255, 129, ' Presentar los dictámenes de la normativa ', '15.8.2', 'Agilidad en los procesos y docentes comprometidos en la integración de comisiones', 'Contribuir a la consolidación del ordenamiento jurídico de la UNAH', 'Dictamen realizados, Informes de propuestas de actualización y reforma de la normativa del nivel', 'Facultad de Ciencias', '2016-01-18', '2016-03-31'),
 (256, 130, 'Elaboración y presentación para aprobación de las propuestas de actualización y reforma de la normativa', '15.9.1', 'Agilidad en los procesos y docentes comprometidos en la integración de comisiones', 'Contribuir a la consolidación del ordenamiento jurídico de la UNAH', 'Actas de apropiación de acuerdos', 'Facultad de Ciencias', '2016-01-18', '2016-03-31'),
 (257, 130, 'Socialización de los acuerdos, dictámenes y normativa aprobado', '15.9.2', 'Agilidad en los procesos y docentes comprometidos en la integración de comisiones', 'Contribuir a la consolidación del ordenamiento jurídico de la UNAH', 'Actas de apropiación de acuerdos', 'Facultad de Ciencias', '2016-01-18', '2016-03-31'),
-(258, 131, 'Conformar la red centroamericana de decanos de las escuelas de derecho de las universidades de la región ', '15.10.1', 'Autoridades de otras facultades y carreras dispuesta a conformar las redes y se cuenta con los fondos necesarios', 'Promover la calidad educativa y el liderazgo de la Facultad de Ciencias Jurídicas de la UNAH en la educación superior del país', 'Informes de resultados', 'Comunidad Universita', '2016-01-18', '2016-03-31');
+(258, 131, 'Conformar la red centroamericana de decanos de las escuelas de derecho de las universidades de la región ', '15.10.1', 'Autoridades de otras facultades y carreras dispuesta a conformar las redes y se cuenta con los fondos necesarios', 'Promover la calidad educativa y el liderazgo de la Facultad de Ciencias Jurídicas de la UNAH en la educación superior del país', 'Informes de resultados', 'Comunidad Universita', '2016-01-18', '2016-03-31'),
+(260, 133, 'actividad febrero', 'correlativo', 'supuesto febrero', 'justificacion febrero', 'medio febrero', 'febrero todos', '2016-02-11', '2016-03-24');
 
 -- --------------------------------------------------------
 
@@ -296,6 +4908,7 @@ INSERT INTO `actividades` (`id_actividad`, `id_indicador`, `descripcion`, `corre
 -- Estructura de tabla para la tabla `actividades_terminadas`
 --
 
+DROP TABLE IF EXISTS `actividades_terminadas`;
 CREATE TABLE IF NOT EXISTS `actividades_terminadas` (
   `id_Actividades_Terminadas` int(11) NOT NULL auto_increment,
   `id_Actividad` int(11) NOT NULL,
@@ -321,6 +4934,7 @@ INSERT INTO `actividades_terminadas` (`id_Actividades_Terminadas`, `id_Actividad
 -- Estructura de tabla para la tabla `alerta`
 --
 
+DROP TABLE IF EXISTS `alerta`;
 CREATE TABLE IF NOT EXISTS `alerta` (
   `Id_Alerta` int(11) NOT NULL auto_increment,
   `NroFolioGenera` varchar(25) NOT NULL,
@@ -341,6 +4955,7 @@ CREATE TABLE IF NOT EXISTS `alerta` (
 -- Estructura de tabla para la tabla `area`
 --
 
+DROP TABLE IF EXISTS `area`;
 CREATE TABLE IF NOT EXISTS `area` (
   `id_Area` int(11) NOT NULL auto_increment,
   `nombre` text NOT NULL,
@@ -375,62 +4990,10 @@ INSERT INTO `area` (`id_Area`, `nombre`, `id_tipo_area`, `observacion`) VALUES
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `cargo`
---
-
-CREATE TABLE IF NOT EXISTS `cargo` (
-  `ID_cargo` int(11) NOT NULL auto_increment,
-  `Cargo` varchar(100) NOT NULL,
-  PRIMARY KEY  (`ID_cargo`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=11 ;
-
---
--- Volcar la base de datos para la tabla `cargo`
---
-
-INSERT INTO `cargo` (`ID_cargo`, `Cargo`) VALUES
-(1, 'Decana'),
-(2, 'Secretaria Docente II'),
-(3, 'Secretaria Docente I'),
-(4, 'Asistente Operativo II'),
-(5, 'Administrador'),
-(6, 'Asistente Administrativo'),
-(7, 'Auxiliar de Oficina'),
-(8, 'Asistente para el Desarrolo Estratégico'),
-(9, 'Asistente de Soporte Técnico'),
-(10, 'Docente');
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `categorias_folios`
---
-
-CREATE TABLE IF NOT EXISTS `categorias_folios` (
-  `Id_categoria` int(11) NOT NULL auto_increment,
-  `NombreCategoria` text NOT NULL,
-  `DescripcionCategoria` text,
-  PRIMARY KEY  (`Id_categoria`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=7 ;
-
---
--- Volcar la base de datos para la tabla `categorias_folios`
---
-
-INSERT INTO `categorias_folios` (`Id_categoria`, `NombreCategoria`, `DescripcionCategoria`) VALUES
-(1, 'Académico', 'n'),
-(2, 'Administrativo', 'n'),
-(3, 'Petición', 'n'),
-(4, 'Agradecimiento', 'n'),
-(5, 'Respuesta de Oficio', 'N'),
-(6, 'Invitación', 'n');
-
--- --------------------------------------------------------
-
---
 -- Estructura de tabla para la tabla `ca_acondicionamientos`
 --
 
+DROP TABLE IF EXISTS `ca_acondicionamientos`;
 CREATE TABLE IF NOT EXISTS `ca_acondicionamientos` (
   `codigo` int(11) NOT NULL auto_increment,
   `nombre` varchar(50) default NULL,
@@ -450,6 +5013,7 @@ INSERT INTO `ca_acondicionamientos` (`codigo`, `nombre`) VALUES
 -- Estructura de tabla para la tabla `ca_areas`
 --
 
+DROP TABLE IF EXISTS `ca_areas`;
 CREATE TABLE IF NOT EXISTS `ca_areas` (
   `codigo` int(11) NOT NULL auto_increment,
   `nombre` varchar(50) default NULL,
@@ -467,6 +5031,7 @@ CREATE TABLE IF NOT EXISTS `ca_areas` (
 -- Estructura de tabla para la tabla `ca_aulas`
 --
 
+DROP TABLE IF EXISTS `ca_aulas`;
 CREATE TABLE IF NOT EXISTS `ca_aulas` (
   `codigo` int(11) NOT NULL auto_increment,
   `cod_edificio` int(11) NOT NULL,
@@ -489,6 +5054,7 @@ INSERT INTO `ca_aulas` (`codigo`, `cod_edificio`, `numero_aula`) VALUES
 -- Estructura de tabla para la tabla `ca_aulas_instancias_acondicionamientos`
 --
 
+DROP TABLE IF EXISTS `ca_aulas_instancias_acondicionamientos`;
 CREATE TABLE IF NOT EXISTS `ca_aulas_instancias_acondicionamientos` (
   `cod_aula` int(11) NOT NULL,
   `cod_instancia_acondicionamiento` int(11) NOT NULL,
@@ -507,6 +5073,7 @@ CREATE TABLE IF NOT EXISTS `ca_aulas_instancias_acondicionamientos` (
 -- Estructura de tabla para la tabla `ca_cargas_academicas`
 --
 
+DROP TABLE IF EXISTS `ca_cargas_academicas`;
 CREATE TABLE IF NOT EXISTS `ca_cargas_academicas` (
   `codigo` int(11) NOT NULL auto_increment,
   `cod_periodo` int(11) default NULL,
@@ -531,6 +5098,7 @@ CREATE TABLE IF NOT EXISTS `ca_cargas_academicas` (
 -- Estructura de tabla para la tabla `ca_contratos`
 --
 
+DROP TABLE IF EXISTS `ca_contratos`;
 CREATE TABLE IF NOT EXISTS `ca_contratos` (
   `codigo` int(11) NOT NULL auto_increment,
   `nombre` varchar(50) default NULL,
@@ -548,6 +5116,7 @@ CREATE TABLE IF NOT EXISTS `ca_contratos` (
 -- Estructura de tabla para la tabla `ca_cursos`
 --
 
+DROP TABLE IF EXISTS `ca_cursos`;
 CREATE TABLE IF NOT EXISTS `ca_cursos` (
   `codigo` int(11) NOT NULL auto_increment,
   `cupos` int(11) default NULL,
@@ -576,6 +5145,7 @@ CREATE TABLE IF NOT EXISTS `ca_cursos` (
 -- Estructura de tabla para la tabla `ca_cursos_dias`
 --
 
+DROP TABLE IF EXISTS `ca_cursos_dias`;
 CREATE TABLE IF NOT EXISTS `ca_cursos_dias` (
   `cod_curso` int(11) NOT NULL,
   `cod_dia` int(11) NOT NULL,
@@ -594,6 +5164,7 @@ CREATE TABLE IF NOT EXISTS `ca_cursos_dias` (
 -- Estructura de tabla para la tabla `ca_dias`
 --
 
+DROP TABLE IF EXISTS `ca_dias`;
 CREATE TABLE IF NOT EXISTS `ca_dias` (
   `codigo` int(11) NOT NULL auto_increment,
   `nombre` varchar(9) default NULL,
@@ -611,6 +5182,7 @@ CREATE TABLE IF NOT EXISTS `ca_dias` (
 -- Estructura de tabla para la tabla `ca_empleados_contratos`
 --
 
+DROP TABLE IF EXISTS `ca_empleados_contratos`;
 CREATE TABLE IF NOT EXISTS `ca_empleados_contratos` (
   `no_empleado` varchar(20) NOT NULL,
   `dni_empleado` varchar(20) NOT NULL,
@@ -630,6 +5202,7 @@ CREATE TABLE IF NOT EXISTS `ca_empleados_contratos` (
 -- Estructura de tabla para la tabla `ca_empleados_proyectos`
 --
 
+DROP TABLE IF EXISTS `ca_empleados_proyectos`;
 CREATE TABLE IF NOT EXISTS `ca_empleados_proyectos` (
   `no_empleado` varchar(20) NOT NULL,
   `dni_empleado` varchar(20) NOT NULL,
@@ -651,6 +5224,7 @@ CREATE TABLE IF NOT EXISTS `ca_empleados_proyectos` (
 -- Estructura de tabla para la tabla `ca_estados_carga`
 --
 
+DROP TABLE IF EXISTS `ca_estados_carga`;
 CREATE TABLE IF NOT EXISTS `ca_estados_carga` (
   `codigo` int(11) NOT NULL,
   `descripcion` varchar(50) default NULL,
@@ -668,6 +5242,7 @@ CREATE TABLE IF NOT EXISTS `ca_estados_carga` (
 -- Estructura de tabla para la tabla `ca_facultades`
 --
 
+DROP TABLE IF EXISTS `ca_facultades`;
 CREATE TABLE IF NOT EXISTS `ca_facultades` (
   `codigo` int(11) NOT NULL auto_increment,
   `nombre` varchar(50) default NULL,
@@ -687,6 +5262,7 @@ INSERT INTO `ca_facultades` (`codigo`, `nombre`) VALUES
 -- Estructura de tabla para la tabla `ca_instancias_acondicionamientos`
 --
 
+DROP TABLE IF EXISTS `ca_instancias_acondicionamientos`;
 CREATE TABLE IF NOT EXISTS `ca_instancias_acondicionamientos` (
   `codigo` int(11) NOT NULL auto_increment,
   `cod_acondicionamiento` int(11) default NULL,
@@ -705,6 +5281,7 @@ CREATE TABLE IF NOT EXISTS `ca_instancias_acondicionamientos` (
 -- Estructura de tabla para la tabla `ca_proyectos`
 --
 
+DROP TABLE IF EXISTS `ca_proyectos`;
 CREATE TABLE IF NOT EXISTS `ca_proyectos` (
   `codigo` int(11) NOT NULL auto_increment,
   `nombre` varchar(50) default NULL,
@@ -726,6 +5303,7 @@ CREATE TABLE IF NOT EXISTS `ca_proyectos` (
 -- Estructura de tabla para la tabla `ca_roles_proyecto`
 --
 
+DROP TABLE IF EXISTS `ca_roles_proyecto`;
 CREATE TABLE IF NOT EXISTS `ca_roles_proyecto` (
   `codigo` int(11) NOT NULL auto_increment,
   `nombre` varchar(50) default NULL,
@@ -743,6 +5321,7 @@ CREATE TABLE IF NOT EXISTS `ca_roles_proyecto` (
 -- Estructura de tabla para la tabla `ca_secciones`
 --
 
+DROP TABLE IF EXISTS `ca_secciones`;
 CREATE TABLE IF NOT EXISTS `ca_secciones` (
   `codigo` int(11) NOT NULL,
   `hora_inicio` time default NULL,
@@ -761,6 +5340,7 @@ CREATE TABLE IF NOT EXISTS `ca_secciones` (
 -- Estructura de tabla para la tabla `ca_vinculaciones`
 --
 
+DROP TABLE IF EXISTS `ca_vinculaciones`;
 CREATE TABLE IF NOT EXISTS `ca_vinculaciones` (
   `codigo` int(11) NOT NULL auto_increment,
   `nombre` varchar(50) default NULL,
@@ -777,9 +5357,65 @@ CREATE TABLE IF NOT EXISTS `ca_vinculaciones` (
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `cargo`
+--
+
+DROP TABLE IF EXISTS `cargo`;
+CREATE TABLE IF NOT EXISTS `cargo` (
+  `ID_cargo` int(11) NOT NULL auto_increment,
+  `Cargo` varchar(100) NOT NULL,
+  PRIMARY KEY  (`ID_cargo`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=11 ;
+
+--
+-- Volcar la base de datos para la tabla `cargo`
+--
+
+INSERT INTO `cargo` (`ID_cargo`, `Cargo`) VALUES
+(1, 'Decana'),
+(2, 'Secretaria Docente II'),
+(3, 'Secretaria Docente I'),
+(4, 'Asistente Operativo II'),
+(5, 'Administrador'),
+(6, 'Asistente Administrativo'),
+(7, 'Auxiliar de Oficina'),
+(8, 'Asistente para el Desarrolo Estratégico'),
+(9, 'Asistente de Soporte Técnico'),
+(10, 'Docente');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `categorias_folios`
+--
+
+DROP TABLE IF EXISTS `categorias_folios`;
+CREATE TABLE IF NOT EXISTS `categorias_folios` (
+  `Id_categoria` int(11) NOT NULL auto_increment,
+  `NombreCategoria` text NOT NULL,
+  `DescripcionCategoria` text,
+  PRIMARY KEY  (`Id_categoria`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=7 ;
+
+--
+-- Volcar la base de datos para la tabla `categorias_folios`
+--
+
+INSERT INTO `categorias_folios` (`Id_categoria`, `NombreCategoria`, `DescripcionCategoria`) VALUES
+(1, 'Académico', 'n'),
+(2, 'Administrativo', 'n'),
+(3, 'Petición', 'n'),
+(4, 'Agradecimiento', 'n'),
+(5, 'Respuesta de Oficio', 'N'),
+(6, 'Invitación', 'n');
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `clases`
 --
 
+DROP TABLE IF EXISTS `clases`;
 CREATE TABLE IF NOT EXISTS `clases` (
   `ID_Clases` int(11) NOT NULL auto_increment,
   `Clase` text NOT NULL,
@@ -866,6 +5502,7 @@ INSERT INTO `clases` (`ID_Clases`, `Clase`) VALUES
 -- Estructura de tabla para la tabla `clases_has_experiencia_academica`
 --
 
+DROP TABLE IF EXISTS `clases_has_experiencia_academica`;
 CREATE TABLE IF NOT EXISTS `clases_has_experiencia_academica` (
   `ID_Clases` int(11) NOT NULL,
   `ID_Experiencia_academica` int(11) NOT NULL,
@@ -885,6 +5522,7 @@ CREATE TABLE IF NOT EXISTS `clases_has_experiencia_academica` (
 -- Estructura de tabla para la tabla `costo_porcentaje_actividad_por_trimestre`
 --
 
+DROP TABLE IF EXISTS `costo_porcentaje_actividad_por_trimestre`;
 CREATE TABLE IF NOT EXISTS `costo_porcentaje_actividad_por_trimestre` (
   `id_Costo_Porcentaje_Actividad_Por_Trimesrte` int(11) NOT NULL auto_increment,
   `id_Actividad` int(11) NOT NULL,
@@ -909,6 +5547,7 @@ INSERT INTO `costo_porcentaje_actividad_por_trimestre` (`id_Costo_Porcentaje_Act
 -- Estructura de tabla para la tabla `departamento_laboral`
 --
 
+DROP TABLE IF EXISTS `departamento_laboral`;
 CREATE TABLE IF NOT EXISTS `departamento_laboral` (
   `Id_departamento_laboral` int(11) NOT NULL auto_increment,
   `nombre_departamento` varchar(30) NOT NULL,
@@ -933,6 +5572,7 @@ INSERT INTO `departamento_laboral` (`Id_departamento_laboral`, `nombre_departame
 -- Estructura de tabla para la tabla `edificios`
 --
 
+DROP TABLE IF EXISTS `edificios`;
 CREATE TABLE IF NOT EXISTS `edificios` (
   `Edificio_ID` int(11) NOT NULL auto_increment,
   `descripcion` text,
@@ -954,6 +5594,7 @@ INSERT INTO `edificios` (`Edificio_ID`, `descripcion`) VALUES
 -- Estructura de tabla para la tabla `empleado`
 --
 
+DROP TABLE IF EXISTS `empleado`;
 CREATE TABLE IF NOT EXISTS `empleado` (
   `No_Empleado` varchar(20) NOT NULL,
   `N_identidad` varchar(20) NOT NULL,
@@ -1013,6 +5654,7 @@ INSERT INTO `empleado` (`No_Empleado`, `N_identidad`, `Id_departamento`, `Fecha_
 -- Estructura de tabla para la tabla `empleado_has_cargo`
 --
 
+DROP TABLE IF EXISTS `empleado_has_cargo`;
 CREATE TABLE IF NOT EXISTS `empleado_has_cargo` (
   `No_Empleado` varchar(20) NOT NULL,
   `ID_cargo` int(11) NOT NULL,
@@ -1070,6 +5712,7 @@ INSERT INTO `empleado_has_cargo` (`No_Empleado`, `ID_cargo`, `Fecha_ingreso_carg
 -- Estructura de tabla para la tabla `estado_seguimiento`
 --
 
+DROP TABLE IF EXISTS `estado_seguimiento`;
 CREATE TABLE IF NOT EXISTS `estado_seguimiento` (
   `Id_Estado_Seguimiento` tinyint(4) NOT NULL auto_increment,
   `DescripcionEstadoSeguimiento` text NOT NULL,
@@ -1090,6 +5733,7 @@ INSERT INTO `estado_seguimiento` (`Id_Estado_Seguimiento`, `DescripcionEstadoSeg
 -- Estructura de tabla para la tabla `estudios_academico`
 --
 
+DROP TABLE IF EXISTS `estudios_academico`;
 CREATE TABLE IF NOT EXISTS `estudios_academico` (
   `ID_Estudios_academico` int(11) NOT NULL auto_increment,
   `Nombre_titulo` varchar(100) NOT NULL,
@@ -1100,12 +5744,14 @@ CREATE TABLE IF NOT EXISTS `estudios_academico` (
   KEY `fk_Estudios_academico_Tipo_estudio1_idx` (`ID_Tipo_estudio`),
   KEY `fk_Estudios_academico_Persona1_idx` (`N_identidad`),
   KEY `fk_estudio_universidad_idx` (`Id_universidad`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=2 ;
 
 --
 -- Volcar la base de datos para la tabla `estudios_academico`
 --
 
+INSERT INTO `estudios_academico` (`ID_Estudios_academico`, `Nombre_titulo`, `ID_Tipo_estudio`, `N_identidad`, `Id_universidad`) VALUES
+(1, 'LICENCIATURA EN INFORMÁTICA ADMINISTRATIVA', 4, '0801-1991-06974', 1);
 
 -- --------------------------------------------------------
 
@@ -1113,6 +5759,7 @@ CREATE TABLE IF NOT EXISTS `estudios_academico` (
 -- Estructura de tabla para la tabla `experiencia_academica`
 --
 
+DROP TABLE IF EXISTS `experiencia_academica`;
 CREATE TABLE IF NOT EXISTS `experiencia_academica` (
   `ID_Experiencia_academica` int(11) NOT NULL auto_increment,
   `Institucion` varchar(45) NOT NULL,
@@ -1133,6 +5780,7 @@ CREATE TABLE IF NOT EXISTS `experiencia_academica` (
 -- Estructura de tabla para la tabla `experiencia_laboral`
 --
 
+DROP TABLE IF EXISTS `experiencia_laboral`;
 CREATE TABLE IF NOT EXISTS `experiencia_laboral` (
   `ID_Experiencia_laboral` int(11) NOT NULL auto_increment,
   `Nombre_empresa` varchar(45) NOT NULL,
@@ -1153,6 +5801,7 @@ CREATE TABLE IF NOT EXISTS `experiencia_laboral` (
 -- Estructura de tabla para la tabla `experiencia_laboral_has_cargo`
 --
 
+DROP TABLE IF EXISTS `experiencia_laboral_has_cargo`;
 CREATE TABLE IF NOT EXISTS `experiencia_laboral_has_cargo` (
   `ID_Experiencia_laboral` int(11) NOT NULL,
   `ID_cargo` int(11) NOT NULL,
@@ -1172,6 +5821,7 @@ CREATE TABLE IF NOT EXISTS `experiencia_laboral_has_cargo` (
 -- Estructura de tabla para la tabla `folios`
 --
 
+DROP TABLE IF EXISTS `folios`;
 CREATE TABLE IF NOT EXISTS `folios` (
   `NroFolio` varchar(25) NOT NULL,
   `NroFolioRespuesta` varchar(25) default NULL,
@@ -1244,7 +5894,9 @@ INSERT INTO `folios` (`NroFolio`, `NroFolioRespuesta`, `FechaCreacion`, `FechaEn
 ('003-2016', NULL, '2015-12-07', '2016-01-11 13:08:05', 'JACINTA RUIZ BONILLA', 6, NULL, 5, 'DA RESPUESTA A OFICIO FCJ-660 DEL 27 DE NOVEIMBRE DE 2015, REFERENTE A VACACIONES SOLICITADAS POR LA COORDINADORA DE CARRERA, ABG. DIANA VALLADARES', 0, 4, 2),
 ('Oficio No.088-2016', NULL, '2016-01-15', '2016-01-18 14:45:37', 'Doctora Rutilia Calderon', 8, NULL, 5, 'Caso del estudiante Eduardo Enrique Fuentes Calix', 0, 4, 1),
 ('Oficio No. VRA-089-2016', NULL, '2016-01-15', '2016-01-18 14:50:14', 'Doctora Rutilia Calderon', 8, NULL, 5, 'En atención a la solicitud presentada por la Lic. Elvia Rosa Elvir Martìnez', 0, 4, 1),
-('Circular VRA-No.001-2016', NULL, '2016-01-15', '2016-01-18 15:07:35', 'Doctora Rutilia Calderon', 8, NULL, 5, 'Dando cumplimiento a lo dispuesto en el Acuerdo No. 2414-253-2011 del Consejo de Educación Superior y a las Normas \nAcadémicas de la UNAH.', 0, 4, 2);
+('Circular VRA-No.001-2016', NULL, '2016-01-15', '2016-01-18 15:07:35', 'Doctora Rutilia Calderon', 8, NULL, 5, 'Dando cumplimiento a lo dispuesto en el Acuerdo No. 2414-253-2011 del Consejo de Educación Superior y a las Normas \nAcadémicas de la UNAH.', 0, 4, 2),
+('CCD-150-2016', NULL, '2016-02-05', '2016-02-05 17:24:24', 'DECANA  BESSY NAZAR', 4, NULL, 3, 'Solicitud de la carga individualizada y listado de los docentes que ocupan las diferentes comisiones.', 0, 8, 1),
+('0001', NULL, '2016-02-11', '2016-02-11 18:39:40', 'ELIZABETH T.', 4, NULL, 1, 'ESTA ES UNA PRUEBA DEL SISTEMA', 1, 7, 2);
 
 -- --------------------------------------------------------
 
@@ -1252,6 +5904,7 @@ INSERT INTO `folios` (`NroFolio`, `NroFolioRespuesta`, `FechaCreacion`, `FechaEn
 -- Estructura de tabla para la tabla `grupo_o_comite`
 --
 
+DROP TABLE IF EXISTS `grupo_o_comite`;
 CREATE TABLE IF NOT EXISTS `grupo_o_comite` (
   `ID_Grupo_o_comite` int(11) NOT NULL auto_increment,
   `Nombre_Grupo_o_comite` varchar(45) NOT NULL,
@@ -1281,6 +5934,7 @@ INSERT INTO `grupo_o_comite` (`ID_Grupo_o_comite`, `Nombre_Grupo_o_comite`) VALU
 -- Estructura de tabla para la tabla `grupo_o_comite_has_empleado`
 --
 
+DROP TABLE IF EXISTS `grupo_o_comite_has_empleado`;
 CREATE TABLE IF NOT EXISTS `grupo_o_comite_has_empleado` (
   `ID_Grupo_o_comite` int(11) NOT NULL,
   `No_Empleado` varchar(20) NOT NULL,
@@ -1303,6 +5957,7 @@ INSERT INTO `grupo_o_comite_has_empleado` (`ID_Grupo_o_comite`, `No_Empleado`) V
 -- Estructura de tabla para la tabla `idioma`
 --
 
+DROP TABLE IF EXISTS `idioma`;
 CREATE TABLE IF NOT EXISTS `idioma` (
   `ID_Idioma` int(11) NOT NULL auto_increment,
   `Idioma` varchar(80) default NULL,
@@ -1335,6 +5990,7 @@ INSERT INTO `idioma` (`ID_Idioma`, `Idioma`) VALUES
 -- Estructura de tabla para la tabla `idioma_has_persona`
 --
 
+DROP TABLE IF EXISTS `idioma_has_persona`;
 CREATE TABLE IF NOT EXISTS `idioma_has_persona` (
   `ID_Idioma` int(11) NOT NULL,
   `N_identidad` varchar(20) NOT NULL,
@@ -1343,12 +5999,15 @@ CREATE TABLE IF NOT EXISTS `idioma_has_persona` (
   PRIMARY KEY  (`Id`),
   KEY `fk_Idioma_has_Persona_Persona1_idx` (`N_identidad`),
   KEY `fk_Idioma_has_Persona_Idioma_idx` (`ID_Idioma`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
 
 --
 -- Volcar la base de datos para la tabla `idioma_has_persona`
 --
 
+INSERT INTO `idioma_has_persona` (`ID_Idioma`, `N_identidad`, `Nivel`, `Id`) VALUES
+(2, '0801-1991-06974', '99', 1),
+(3, '0801-1991-06974', '60', 2);
 
 -- --------------------------------------------------------
 
@@ -1356,6 +6015,7 @@ CREATE TABLE IF NOT EXISTS `idioma_has_persona` (
 -- Estructura de tabla para la tabla `indicadores`
 --
 
+DROP TABLE IF EXISTS `indicadores`;
 CREATE TABLE IF NOT EXISTS `indicadores` (
   `id_Indicadores` int(11) NOT NULL auto_increment,
   `id_ObjetivosInsitucionales` int(11) NOT NULL,
@@ -1363,7 +6023,7 @@ CREATE TABLE IF NOT EXISTS `indicadores` (
   `descripcion` text,
   PRIMARY KEY  (`id_Indicadores`),
   KEY `id_ObjetivosInsitucionales` (`id_ObjetivosInsitucionales`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=132 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=134 ;
 
 --
 -- Volcar la base de datos para la tabla `indicadores`
@@ -1495,7 +6155,8 @@ INSERT INTO `indicadores` (`id_Indicadores`, `id_ObjetivosInsitucionales`, `nomb
 (128, 57, '15.7Realizados al menos dos en', '15.7Realizados al menos dos encuentros entre autoridades de la Facultad de CCJJ y la comunidad docente'),
 (129, 58, '15.8 100% de comisiones de  di', '15.8 100% de comisiones de  dictámenes y propuesta de actualización y reformas de la normativa del nivel conformadas                                '),
 (130, 58, '15.9 100% de Acuerdos ,dictáme', '15.9 100% de Acuerdos ,dictámenes y normativa armonizada y aprobados.'),
-(131, 58, '15.10 Conformadas en un 100% l', '15.10 Conformadas en un 100% las redes de facultades y carreras de ciencias jurídicas  a nivel nacional y regional.');
+(131, 58, '15.10 Conformadas en un 100% l', '15.10 Conformadas en un 100% las redes de facultades y carreras de ciencias jurídicas  a nivel nacional y regional.'),
+(133, 60, 'indicador febrero', 'na');
 
 -- --------------------------------------------------------
 
@@ -1503,6 +6164,7 @@ INSERT INTO `indicadores` (`id_Indicadores`, `id_ObjetivosInsitucionales`, `nomb
 -- Estructura de tabla para la tabla `motivos`
 --
 
+DROP TABLE IF EXISTS `motivos`;
 CREATE TABLE IF NOT EXISTS `motivos` (
   `Motivo_ID` int(11) NOT NULL auto_increment,
   `descripcion` text,
@@ -1524,6 +6186,7 @@ INSERT INTO `motivos` (`Motivo_ID`, `descripcion`) VALUES
 -- Estructura de tabla para la tabla `notificaciones_folios`
 --
 
+DROP TABLE IF EXISTS `notificaciones_folios`;
 CREATE TABLE IF NOT EXISTS `notificaciones_folios` (
   `Id_Notificacion` int(11) NOT NULL auto_increment,
   `NroFolio` varchar(25) NOT NULL,
@@ -1558,6 +6221,7 @@ INSERT INTO `notificaciones_folios` (`Id_Notificacion`, `NroFolio`, `IdEmisor`, 
 -- Estructura de tabla para la tabla `objetivos_institucionales`
 --
 
+DROP TABLE IF EXISTS `objetivos_institucionales`;
 CREATE TABLE IF NOT EXISTS `objetivos_institucionales` (
   `id_Objetivo` int(11) NOT NULL auto_increment,
   `definicion` text NOT NULL,
@@ -1569,7 +6233,7 @@ CREATE TABLE IF NOT EXISTS `objetivos_institucionales` (
   KEY `id_Area` (`id_Area`),
   KEY `id_Poa` (`id_Poa`),
   KEY `id_Area_2` (`id_Area`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=59 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=61 ;
 
 --
 -- Volcar la base de datos para la tabla `objetivos_institucionales`
@@ -1631,7 +6295,8 @@ INSERT INTO `objetivos_institucionales` (`id_Objetivo`, `definicion`, `area_Estr
 (55, 'Contar con una gestión académica de calidad y pertinente a la complejidad de la UNAH, ágil, moderna y flexible que permita un apoyo efectivo al desarrollo de las funciones fundamentales de la Universidad y del proceso educativo; por medio de la formulación y aplicación a través de un sistema automatizado de políticas, normas y procedimientos académicos ; que orienta la planificación, organización, integración y control de los servicios de soporte a la docencia, investigación, vinculación universidad-sociedad, gestión del conocimiento, y la monitoria y evaluación de dichas funciones, con un enfoque de gestión basada en resultados y evaluación de alcances.', 'Mejoramiento de la Calidad, la Pertinencia y la Equidad.', '1) Se desarrolla un tratamiento sistemático y continuo de las dimensiones de la gestión académica en la vida funcional de la Facultad de Ciencias Jurídicas.\n\n2) Definidas las estrategias para el tratamiento del clima organizacional.', 13, 10),
 (56, 'Promover una política institucional de relaciones internacionales para ubicar a la UNAH en una posición de liderazgo en la educación superior.', 'a) Gestionar y promover movilidades internacionales en pro de la academia, la investigación y la cultura, con prioridad en el apoyo a los temas de Relevo Docente y mejora en las capacidades internas de las distintas unidades académicas de la UNAH.', '1) Carrera de Derecho acreditada nacional e internacionalmente.\n\n2) Docentes, alumnos y personal administrativo y de apoyo beneficiados con estudios e intercambio académicos en el extranjero.', 14, 10),
 (57, 'Fortalecer y consolidar el gobierno universitario, basando sus acciones y decisiones en los principios de Democracia, Respeto, Responsabilidad, Subsidiaridad, Transparencia y Rendición de cuentas.', 'a) Lograr que la UNAH lleve a cabo en forma sostenida y permanente, un ejercicio pleno y responsable del principio de autonomía, que le permita participar activamente en la transformación de la sociedad hondureña.', '1) Fortalecida la estabilidad y consolidada la gobernabilidad..\n\n2) Consolidada la gobernabilidad por los procesos de reforma y gestión por parte de las autoridades a efecto de rescatar la confianza, el respeto y el reconocimiento de la comunidad hondureña e internacional.\n\n3) Realizadas las acciones de gestión que fortalezcan la vinculación de las autoridades universitarias con los docentes, los estudiantes y en general los trabajadores de la institución.', 15, 10),
-(58, 'Fortalecer y consolidar las responsabilidades de la UNAH en el papel de organizar, dirigir y desarrollar la educación superior del país.', 'b) Fortalecer la atribución que la Constitución de la República le otorga a la UNAH de organizar, dirigir y desarrollar la educación superior y profesional.', 'Sistema de educación superior regularizado en términos de calidad y pertinencia.', 15, 10);
+(58, 'Fortalecer y consolidar las responsabilidades de la UNAH en el papel de organizar, dirigir y desarrollar la educación superior del país.', 'b) Fortalecer la atribución que la Constitución de la República le otorga a la UNAH de organizar, dirigir y desarrollar la educación superior y profesional.', 'Sistema de educación superior regularizado en términos de calidad y pertinencia.', 15, 10),
+(60, 'objetivo febrero', 'area estrategica febrero', 'febrero', 1, 12);
 
 -- --------------------------------------------------------
 
@@ -1639,6 +6304,7 @@ INSERT INTO `objetivos_institucionales` (`id_Objetivo`, `definicion`, `area_Estr
 -- Estructura de tabla para la tabla `organizacion`
 --
 
+DROP TABLE IF EXISTS `organizacion`;
 CREATE TABLE IF NOT EXISTS `organizacion` (
   `Id_Organizacion` int(11) NOT NULL auto_increment,
   `NombreOrganizacion` text NOT NULL,
@@ -1657,6 +6323,7 @@ CREATE TABLE IF NOT EXISTS `organizacion` (
 -- Estructura de tabla para la tabla `pais`
 --
 
+DROP TABLE IF EXISTS `pais`;
 CREATE TABLE IF NOT EXISTS `pais` (
   `Id_pais` int(11) NOT NULL auto_increment,
   `Nombre_pais` text NOT NULL,
@@ -1889,6 +6556,7 @@ INSERT INTO `pais` (`Id_pais`, `Nombre_pais`) VALUES
 -- Estructura de tabla para la tabla `permisos`
 --
 
+DROP TABLE IF EXISTS `permisos`;
 CREATE TABLE IF NOT EXISTS `permisos` (
   `id_Permisos` int(11) NOT NULL auto_increment,
   `id_departamento` int(11) NOT NULL,
@@ -1913,14 +6581,17 @@ CREATE TABLE IF NOT EXISTS `permisos` (
   KEY `fk_revisado_idx` (`revisado_por`),
   KEY `fk_departamento_idx` (`id_departamento`),
   KEY `fk_usuario_idx` (`id_usuario`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=15 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=18 ;
 
 --
 -- Volcar la base de datos para la tabla `permisos`
 --
 
 INSERT INTO `permisos` (`id_Permisos`, `id_departamento`, `No_Empleado`, `id_motivo`, `dias_permiso`, `hora_inicio`, `hora_finalizacion`, `fecha`, `fecha_solicitud`, `estado`, `observacion`, `revisado_por`, `id_Edificio_Registro`, `id_usuario`, `revisarPor`, `id_tipo_permiso`) VALUES
-(14, 4, '12968', 8, 1, '07:00:00', '14:30:00', '2015-12-11 00:00:00', '2015-12-11', 'Finalizado', NULL, '6558', 9, 12, '11538', 3);
+(14, 4, '12968', 8, 1, '07:00:00', '14:30:00', '2015-12-11 00:00:00', '2015-12-11', 'Finalizado', NULL, '6558', 9, 12, '11538', 3),
+(15, 4, '12968', 6, 5, '07:00:00', '14:30:00', '2016-10-17 00:00:00', '2016-02-11', 'Aprobado', NULL, '6558', 9, 12, '', 1),
+(16, 4, '12968', 8, 1, '07:00:00', '15:00:00', '2016-02-11 00:00:00', '2016-02-11', 'Espera', NULL, NULL, 9, 12, '11538', 1),
+(17, 4, '12968', 7, 1, '07:00:00', '15:00:00', '2016-02-12 00:00:00', '2016-02-11', 'Espera', NULL, NULL, 9, 12, '11538', 3);
 
 -- --------------------------------------------------------
 
@@ -1928,6 +6599,7 @@ INSERT INTO `permisos` (`id_Permisos`, `id_departamento`, `No_Empleado`, `id_mot
 -- Estructura de tabla para la tabla `persona`
 --
 
+DROP TABLE IF EXISTS `persona`;
 CREATE TABLE IF NOT EXISTS `persona` (
   `N_identidad` varchar(20) NOT NULL,
   `Primer_nombre` varchar(20) NOT NULL,
@@ -1958,7 +6630,7 @@ INSERT INTO `persona` (`N_identidad`, `Primer_nombre`, `Segundo_nombre`, `Primer
 ('0801-1978-12387', 'Monica', 'Esmeralda', 'Dormes', 'Ramirez', '1978-07-12', 'F', '', 'esmeraldadormes772@gmail.com', 'soltero', 'hondureña', ''),
 ('0709-1990-00100', 'Carlos', 'Luis', 'Burgos', 'Ochoa', '1990-07-17', 'F', '', 'carlos_beckl@hotmail.com', 'Soltero', 'hondureña', ''),
 ('0801-1969-02793', 'Jhonny', 'Alexis', 'Membreño', 'x', '1969-06-02', 'M', '', 'jhonny.membreno@unah.edu.hn', 'Soltero', 'hondureña', ''),
-('0801-1991-06974', 'Elizabeth', '', 'Tecero', 'Calix', '1991-03-31', 'F', '', 'francis.tercero@unah.edu.hn', 'Soltero', 'hondureña', ''),
+('0801-1991-06974', 'Elizabeth', '', 'Tercero', 'Calix', '1991-03-31', 'F', '', 'francis.tercero@unah.edu.hn', 'soltero', 'hondureña', ''),
 ('0801-1988-16746', 'Evelin', 'Rocio', 'Canaca', 'Arriola', '1988-09-06', 'F', '', 'ecanaca@unah.edu.hn', 'Soltero', 'hondureña', ''),
 ('0801-1985-18347', 'Jorge', 'Luis', 'Aguilar', 'Flores', '1985-09-15', 'M', '', 'jorge.aguilar@unah.edu.hn', 'Soltero', 'hondureña', ''),
 ('0801-1959-03858', 'Gloria', 'Isabel', 'Oseguera', 'Lopez', '1959-09-21', 'F', '', 'gloriaoseguera@yahoo.com', 'Soltero', 'hondureña', ''),
@@ -2218,7 +6890,32 @@ INSERT INTO `persona` (`N_identidad`, `Primer_nombre`, `Segundo_nombre`, `Primer
 ('1503-1980-01992', 'ERICA', 'MILAGRO', 'MUÑOZ', 'FIGUEROA', '1980-12-12', 'F', 'N/D', 'ericka_m81@hotmail.com', 'Soltero', 'HONDUREÑA', ''),
 ('1312-1974-00146', 'ABRAHAM', 'N/D', 'ALVARENGA', 'URBINA', '1900-01-01', 'M', 'N/D', 'nd@yahoo.com', 'Soltero', 'HONDUREÑA', ''),
 ('0801-1963-01704', 'ABRAHAM', 'N/D', 'FIGUEROA', 'TERCERO', '1963-01-01', 'M', 'N/D', 'patriotaf3@gmail.com', 'Soltero', 'HONDUREÑA', ''),
-('0801-1992-16442', 'AÍDA', 'CAROLINA', 'SIERRA', 'TORRES', '1900-01-01', 'F', 'N/D', 'karolina1775@hotmail.com', 'Soltero', 'HONDUREÑA', '');
+('0801-1992-16442', 'AÍDA', 'CAROLINA', 'SIERRA', 'TORRES', '1900-01-01', 'F', 'N/D', 'karolina1775@hotmail.com', 'Soltero', 'HONDUREÑA', ''),
+('0309-1990-00014', 'ALDO', 'ADONIS', 'CARDONA', 'MARTÍNEZ', '1990-01-01', 'M', 'N/D', 'aldocardona2011@yahoo.com', 'Soltero', 'HONDUREÑA', ''),
+('0501-1993-00152', 'ALEJANDRA', 'MARÍA', 'RIVERA', 'RODRÍGUEZ', '1900-01-01', 'F', 'N/D', 'ale-rivera-r@hotmail.com', 'Soltero', 'HONDUREÑA', ''),
+('0801-1959-03814', 'ALEX', 'LEONEL', 'NAVAS', 'N/D', '1900-01-01', 'F', 'N/D', 'nd@yahoo.com', 'Soltero', 'HONDUREÑA', ''),
+('0801-1991-19110', 'ALISSON', 'MITCHELL', 'CABRERA', 'GAMEZ', '1900-01-01', 'F', 'N/D', 'nd@yahoo.com', 'Soltero', 'HONDUREÑA', ''),
+('0801-1993-04902', 'ALLAN', 'EDUARDO', 'ARTICA', 'SALINAS', '1900-01-01', 'M', 'N/D', 'allanartica@hotmail.com', 'Soltero', 'HONDUREÑA', ''),
+('0801-1991-09695', 'ALLAN', 'FERNANDO', 'ALVARENGA', 'GRADIS', '1900-01-01', 'M', 'N/D', 'alvarenga_allan91@hotmail.com', 'Soltero', 'HONDUREÑA', ''),
+('0801-1992-04969', 'ALLAN', 'SAMAEL', 'CRUZ', 'HERNÁNDEZ', '1900-01-01', 'M', 'N/D', 'asch.cruz@gmail.com', 'Soltero', 'HONDUREÑA', ''),
+('0801-1968-01777', 'AMINDA', 'SUYAPA', 'MANZANARES', 'CERRATO', '1900-01-01', 'F', 'N/D', 'mamindasuyapa@yahoo.com', 'Soltero', 'HONDUREÑA', ''),
+('0801-1991-20992', 'AMY', 'ELIZABETH', 'ESCALANTE', 'RODRÍGUEZ', '1900-01-01', 'F', 'N/D', 'amyliz_1309@hotmail.com', 'Soltero', 'HONDUREÑA', ''),
+('0801-1978-00051', 'ANA', 'ELIZABETH', 'REYES', 'CARRASCO', '1900-01-01', 'F', 'N/D', 'aereyes@poderjudicial.gob.hn', 'Soltero', 'HONDUREÑA', ''),
+('0801-1988-15506', 'ANA', 'GABRIELA', 'MEJÍA', 'CORRALES', '1900-01-01', 'F', 'N/D', 'anamejia_88@yahoo.es', 'Soltero', 'HONDUREÑA', ''),
+('0801-1993-20450', 'ANA', 'RUBÍ', 'PÉREZ', 'COLINDRES', '1900-01-01', 'F', 'N/D', 'ana-rubi1993@hotmail.com', 'Soltero', 'HONDUREÑA', ''),
+('0801-1989-23436', 'ANDREA', 'STEFANÍA', 'LAGOS', 'HERRERA', '1900-01-01', 'F', 'N/D', 'andylagos_h10@hotmail.es', 'Soltero', 'HONDUREÑA', ''),
+('0311-1987-00215', 'ARLE', 'DESSENIA', 'ORTÍZ', 'CANALES', '1900-01-01', 'F', 'N/D', 'arleortiz@yahoo.es', 'Soltero', 'HONDUREÑA', ''),
+('1312-1989-00085', 'ARMANDO', 'N/D', 'AGUIRRE', 'PORTILLO', '1900-01-01', 'F', 'N/D', 'armandoaguirre98@yahoo.com', 'Soltero', 'HONDUREÑA', ''),
+('1701-1990-00063', 'AROLD', 'IVERSON', 'MEJÍA', 'MONTES', '1900-01-01', 'F', 'N/D', 'aiverson_i3@yahoo.com', 'Soltero', 'HONDUREÑA', ''),
+('0801-1991-18102', 'BESSY', 'YAMILETH', 'ORTÍZ', 'RAMOS', '1900-01-01', 'F', 'N/D', 'o.bessy@yahoo.com', 'Soltero', 'HONDUREÑA', ''),
+('0301-1990-00485', 'BESY', 'ROCILLO', 'MOLINA', 'SILVA', '1900-01-01', 'F', 'N/D', 'besyrocioms@yahoo.es', 'Soltero', 'HONDUREÑA', ''),
+('0806-1962-00063', 'BETTY', 'ARACELY', 'CASTRO', 'N/D', '1900-01-01', 'F', 'N/D', 'bcastro3003@gmail.com', 'Soltero', 'HONDUREÑA', ''),
+('0801-1978-03326', 'BILLY', 'DANIEL', 'PÉREZ', 'IRÍAS', '1900-01-01', 'M', 'N/D', 'nd@yahoo.com', 'Soltero', 'HONDUREÑA', ''),
+('0801-1974-11622', 'CAMILA', 'MERCEDES', 'ZANNA', 'SEGURA', '1900-01-01', 'F', 'N/D', 'camezase@yahoo.es', 'Soltero', 'HONDUREÑA', ''),
+('0501-1974-07945', 'CARLA', 'TERESA', 'BERTRAND', 'MONTOYA', '1900-01-01', 'F', 'N/D', 'carlateresabertrand@yahoo.com.mx', 'Soltero', 'HONDUREÑA', ''),
+('0801-1973-02463', 'CARLOS', 'ALBERTO', 'MEDINA', 'HERNANDEZ', '1900-01-01', 'M', 'N/D', 'carlosalberto73.medina@yahoo.com', 'Soltero', 'HONDUREÑA', ''),
+('0715-1991-00645', 'CARLOS', 'ALEXIS', 'MATAMOROS', 'SÁNCHEZ', '1900-01-01', 'M', 'N/D', 'cmatamorosjn@gmail.com', 'Soltero', 'HONDUREÑA', ''),
+('0815-1990-00184', 'CARLOS', 'EDUARDO', 'ÁVILA', 'FUNEZ', '1900-01-01', 'M', 'N/D', 'avilacarlos360@gmail.com', 'Soltero', 'HONDUREÑA', '');
 
 -- --------------------------------------------------------
 
@@ -2226,14 +6923,15 @@ INSERT INTO `persona` (`N_identidad`, `Primer_nombre`, `Segundo_nombre`, `Primer
 -- Estructura de tabla para la tabla `poa`
 --
 
+DROP TABLE IF EXISTS `poa`;
 CREATE TABLE IF NOT EXISTS `poa` (
   `id_Poa` int(11) NOT NULL auto_increment,
-  `nombre` varchar(30) NOT NULL,
+  `nombre` varchar(100) NOT NULL,
   `fecha_de_Inicio` date NOT NULL,
   `fecha_Fin` date NOT NULL,
   `descripcion` text NOT NULL,
   PRIMARY KEY  (`id_Poa`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=11 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=13 ;
 
 --
 -- Volcar la base de datos para la tabla `poa`
@@ -2246,10 +6944,11 @@ INSERT INTO `poa` (`id_Poa`, `nombre`, `fecha_de_Inicio`, `fecha_Fin`, `descripc
 (4, 'CONSULTORIO JURÍDICO GRATUITO', '2016-01-01', '2016-12-20', ''),
 (5, 'POSGRADOS', '2016-01-01', '2016-12-20', ''),
 (6, 'UNIDAD DE INVESTIGACIÓN', '2016-01-01', '2016-12-20', ''),
-(7, 'INSTITUTO DE INVESTIGACIÓN JUR', '2016-01-01', '2016-12-31', ''),
+(7, 'INSTITUTO DE INVESTIGACIÓN JURIDICA', '2016-01-01', '2016-12-31', ''),
 (8, 'UNIDAD VINCULACIÓN UNIVERSIDAD', '2016-01-01', '2016-12-20', ''),
 (9, 'ADMINISTRACIÓN', '2016-01-18', '2016-12-20', ''),
-(10, 'DECANATO', '2016-01-18', '2016-12-20', '');
+(10, 'DECANATO', '2016-01-18', '2016-12-20', ''),
+(12, 'ejemplo febrero 2016', '2016-02-11', '2017-02-11', '');
 
 -- --------------------------------------------------------
 
@@ -2257,6 +6956,7 @@ INSERT INTO `poa` (`id_Poa`, `nombre`, `fecha_de_Inicio`, `fecha_Fin`, `descripc
 -- Estructura de tabla para la tabla `prioridad`
 --
 
+DROP TABLE IF EXISTS `prioridad`;
 CREATE TABLE IF NOT EXISTS `prioridad` (
   `Id_Prioridad` tinyint(4) NOT NULL,
   `DescripcionPrioridad` text NOT NULL,
@@ -2277,6 +6977,7 @@ INSERT INTO `prioridad` (`Id_Prioridad`, `DescripcionPrioridad`) VALUES
 -- Estructura de tabla para la tabla `prioridad_folio`
 --
 
+DROP TABLE IF EXISTS `prioridad_folio`;
 CREATE TABLE IF NOT EXISTS `prioridad_folio` (
   `Id_PrioridadFolio` int(11) NOT NULL auto_increment,
   `IdFolio` varchar(25) NOT NULL,
@@ -2333,6 +7034,7 @@ INSERT INTO `prioridad_folio` (`Id_PrioridadFolio`, `IdFolio`, `Id_Prioridad`, `
 -- Estructura de tabla para la tabla `responsables_por_actividad`
 --
 
+DROP TABLE IF EXISTS `responsables_por_actividad`;
 CREATE TABLE IF NOT EXISTS `responsables_por_actividad` (
   `id_Responsable_por_Actividad` int(11) NOT NULL auto_increment,
   `id_Actividad` int(11) NOT NULL,
@@ -2342,7 +7044,7 @@ CREATE TABLE IF NOT EXISTS `responsables_por_actividad` (
   PRIMARY KEY  (`id_Responsable_por_Actividad`),
   KEY `id_Actividad` (`id_Actividad`,`id_Responsable`),
   KEY `id_Responsable` (`id_Responsable`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=238 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=239 ;
 
 --
 -- Volcar la base de datos para la tabla `responsables_por_actividad`
@@ -2585,7 +7287,8 @@ INSERT INTO `responsables_por_actividad` (`id_Responsable_por_Actividad`, `id_Ac
 (234, 254, 11, '2016-01-18', ''),
 (235, 255, 11, '2016-01-18', ''),
 (236, 256, 11, '2016-01-18', ''),
-(237, 258, 11, '2016-01-18', '');
+(237, 258, 11, '2016-01-18', ''),
+(238, 260, 1, '2016-02-11', 'na');
 
 -- --------------------------------------------------------
 
@@ -2593,6 +7296,7 @@ INSERT INTO `responsables_por_actividad` (`id_Responsable_por_Actividad`, `id_Ac
 -- Estructura de tabla para la tabla `roles`
 --
 
+DROP TABLE IF EXISTS `roles`;
 CREATE TABLE IF NOT EXISTS `roles` (
   `Id_Rol` tinyint(4) NOT NULL,
   `Descripcion` text NOT NULL,
@@ -2619,6 +7323,7 @@ INSERT INTO `roles` (`Id_Rol`, `Descripcion`) VALUES
 -- Estructura de tabla para la tabla `sa_ciudades`
 --
 
+DROP TABLE IF EXISTS `sa_ciudades`;
 CREATE TABLE IF NOT EXISTS `sa_ciudades` (
   `codigo` int(11) NOT NULL auto_increment,
   `nombre` varchar(50) default NULL,
@@ -2655,6 +7360,7 @@ INSERT INTO `sa_ciudades` (`codigo`, `nombre`) VALUES
 -- Estructura de tabla para la tabla `sa_estados_solicitud`
 --
 
+DROP TABLE IF EXISTS `sa_estados_solicitud`;
 CREATE TABLE IF NOT EXISTS `sa_estados_solicitud` (
   `codigo` int(11) NOT NULL auto_increment,
   `descripcion` varchar(50) NOT NULL,
@@ -2675,6 +7381,7 @@ INSERT INTO `sa_estados_solicitud` (`codigo`, `descripcion`) VALUES
 -- Estructura de tabla para la tabla `sa_estudiantes`
 --
 
+DROP TABLE IF EXISTS `sa_estudiantes`;
 CREATE TABLE IF NOT EXISTS `sa_estudiantes` (
   `dni` varchar(20) NOT NULL,
   `no_cuenta` varchar(11) NOT NULL,
@@ -2940,7 +7647,32 @@ INSERT INTO `sa_estudiantes` (`dni`, `no_cuenta`, `anios_inicio_estudio`, `indic
 ('1503-1980-01992', '20000100001', '2000', 71, '2016-01-19', 207, NULL, 2, 15, 1, 16, '2015', ' ', '', 2000, 2015),
 ('1312-1974-00146', '100920', '2011', 89, '2016-01-23', 78, NULL, 1, 2, 1, 2, '0', ' ', 'especialista en derecho penal y procesal', 0, 0),
 ('0801-1963-01704', '8280015', '1982', 83, '2016-01-23', 207, NULL, 2, 16, 1, 16, '2014', ' ', '', 1982, 2014),
-('0801-1992-16442', '20091011373', '2009', 77, '2016-01-23', 270, NULL, 1, 2, 6, 2, '2014', ' ', '', 2009, 2014);
+('0801-1992-16442', '20091011373', '2009', 77, '2016-01-23', 270, NULL, 1, 2, 6, 2, '2014', ' ', '', 2009, 2014),
+('0309-1990-00014', '20091012389', '0', 0, '2016-02-09', 1, NULL, 1, 2, 6, 2, '0', ' ', '', 0, 0),
+('0501-1993-00152', '20101002787', '0', 0, '2016-02-09', 1, NULL, 1, 2, 6, 2, '0', ' ', '', 0, 0),
+('0801-1959-03814', '8710662', '0', 78, '2016-02-09', 190, NULL, 2, 2, 1, 2, '0', ' ', '', 1987, 2007),
+('0801-1991-19110', '20101000235', '0', 0, '2016-02-09', 1, NULL, 1, 2, 6, 2, '0', ' ', '', 0, 0),
+('0801-1993-04902', '20101000146', '0', 0, '2016-02-10', 1, NULL, 1, 2, 6, 2, '0', ' ', '', 0, 0),
+('0801-1991-09695', '20091011787', '0', 0, '2016-02-10', 1, NULL, 1, 2, 6, 2, '0', ' ', '', 0, 0),
+('0801-1992-04969', '20081012279', '0', 78, '2016-02-10', 272, NULL, 1, 2, 6, 2, '0', ' ', '', 2008, 2014),
+('0801-1968-01777', '20070015031', '2007', 75, '2016-02-10', 274, NULL, 1, 2, 6, 2, '2014', ' ', '', 2007, 2014),
+('0801-1991-20992', '20101000712', '0', 0, '2016-02-10', 1, NULL, 1, 2, 6, 2, '0', ' ', '', 0, 0),
+('0801-1978-00051', '20051008169', '0', 75, '2016-02-10', 261, NULL, 1, 2, 6, 2, '0', ' ', '', 2005, 2014),
+('0801-1988-15506', '20091000970', '0', 72, '2016-02-10', 267, NULL, 1, 2, 6, 2, '0', ' ', '', 2009, 2014),
+('0801-1993-20450', '20101010189', '0', 0, '2016-02-10', 1, NULL, 1, 2, 6, 2, '0', ' ', '', 0, 0),
+('0801-1989-23436', '20070002577', '0', 70, '2016-02-10', 262, NULL, 1, 2, 6, 2, '0', ' ', '', 2007, 2014),
+('0311-1987-00215', '20061005948', '0', 80, '2016-02-10', 277, NULL, 1, 2, 6, 2, '0', ' ', '', 2006, 2014),
+('1312-1989-00085', '20081000475', '0', 74, '2016-02-10', 269, NULL, 1, 2, 6, 2, '0', ' ', '', 2008, 2014),
+('1701-1990-00063', '20091002694', '0', 0, '2016-02-10', 1, NULL, 1, 2, 6, 2, '0', ' ', '', 0, 0),
+('0801-1991-18102', '20091002861', '0', 75, '2016-02-11', 261, NULL, 1, 2, 6, 2, '0', ' ', '', 2009, 2014),
+('0301-1990-00485', '20091902228', '0', 0, '2016-02-11', 1, NULL, 1, 2, 6, 2, '0', ' ', '', 0, 0),
+('0806-1962-00063', '8217360', '0', 0, '2016-02-11', 1, NULL, 1, 2, 6, 2, '0', ' ', '', 0, 0),
+('0801-1978-03326', '9910153', '0', 0, '2016-02-11', 1, NULL, 2, 2, 1, 2, '0', ' ', '', 1999, 0),
+('0801-1974-11622', '9310585', '1993', 71, '2016-02-11', 205, NULL, 2, 2, 5, 2, '2007', ' ', '', 1993, 2007),
+('0501-1974-07945', '8020091', '0', 68, '2016-02-11', 204, NULL, 2, 2, 4, 2, '0', ' ', '', 1980, 2009),
+('0801-1973-02463', '9414399', '0', 70, '2016-02-11', 191, NULL, 2, 2, 1, 2, '0', ' ', '', 1995, 2015),
+('0715-1991-00645', '20091003984', '0', 0, '2016-02-11', 1, NULL, 1, 2, 6, 2, '0', ' ', '', 0, 0),
+('0815-1990-00184', '20081005872', '0', 73, '2016-02-11', 278, NULL, 1, 2, 6, 2, '0', ' ', '', 2008, 2014);
 
 -- --------------------------------------------------------
 
@@ -2948,6 +7680,7 @@ INSERT INTO `sa_estudiantes` (`dni`, `no_cuenta`, `anios_inicio_estudio`, `indic
 -- Estructura de tabla para la tabla `sa_estudiantes_correos`
 --
 
+DROP TABLE IF EXISTS `sa_estudiantes_correos`;
 CREATE TABLE IF NOT EXISTS `sa_estudiantes_correos` (
   `dni_estudiante` varchar(20) NOT NULL,
   `correo` varchar(50) NOT NULL,
@@ -2966,10 +7699,13 @@ INSERT INTO `sa_estudiantes_correos` (`dni_estudiante`, `correo`) VALUES
 ('0209-1985-02706', 'josmi_09@hotmail.com'),
 ('0209-1988-00380', 'jcueva@live.com'),
 ('0301-1990-00206', 'cristinaescobar940@yahoo.es'),
+('0301-1990-00485', 'besyrocioms@yahoo.es'),
 ('0301-1991-02655', 'padilladaniel920@gmail.com'),
 ('0301-1992-02168', 'josselyn200631@gmail.com'),
 ('0301-1992-02454', 'francisco.flores21@yahoo.es'),
 ('0306-1990-00442', 'lizwatters10@yahoo.com'),
+('0309-1990-00014', 'aldocardona2011@yahoo.com'),
+('0311-1987-00215', 'arleortiz@yahoo.es'),
 ('0313-1991-00244', 'xioma_2008@yahoo.com'),
 ('0313-1993-00221', 'sadyr2010@yahoo.com'),
 ('0318-1990-01175', 'bnjja@yahoo.com'),
@@ -2977,6 +7713,8 @@ INSERT INTO `sa_estudiantes_correos` (`dni_estudiante`, `correo`) VALUES
 ('0501-1969-08032', 'mariovargas2218@gmail.com'),
 ('0501-1973-05537', 'sorayacordon@yahoo.com'),
 ('0501-1973-09295', 'cerrato_evelyn@yahoo.com'),
+('0501-1974-07945', 'carlateresabertrand@yahoo.com.mx'),
+('0501-1993-00152', 'ale-rivera-r@hotmail.com'),
 ('0601-1964-01002', 'mgarciaunah@gmail.com'),
 ('0601-1973-01687', 'nd@yahoo.com'),
 ('0601-1978-02416', 'edisquiroz@hotmail.com'),
@@ -3004,12 +7742,14 @@ INSERT INTO `sa_estudiantes_correos` (`dni_estudiante`, `correo`) VALUES
 ('0704-1989-01096', 'bnbp2589@hotmail.com'),
 ('0705-1977-00029', 'nd@yahoo.com'),
 ('0715-1989-01068', 'yojana_esponja@yahoo.com'),
+('0715-1991-00645', 'cmatamorosjn@gmail.com'),
 ('0801-0000-00000', 'nd@yahoo.com'),
 ('0801-1903-33333', 'nd@yahoo.com'),
 ('0801-1954-03188', 'nd@yahoo.com'),
 ('0801-1956-00332', 'nd@yahoo.com'),
 ('0801-1958-03532', 'nd@yahoo.com'),
 ('0801-1958-07367', 'rioscarlosmanuel@hotmail.com'),
+('0801-1959-03814', 'nd@yahoo.com'),
 ('0801-1960-00244', 'luisc200448@yahoo.es'),
 ('0801-1960-03413', 'nd@yahoo.com'),
 ('0801-1963-01704', 'patriotaf3@gmail.com'),
@@ -3021,11 +7761,14 @@ INSERT INTO `sa_estudiantes_correos` (`dni_estudiante`, `correo`) VALUES
 ('0801-1967-05937', 'gabrielelvir@yahoo.com'),
 ('0801-1967-06317', 'jmmendezs@yahoo.es'),
 ('0801-1967-09794', 'javierchavez_ramos@hotmail.com'),
+('0801-1968-01777', 'mamindasuyapa@yahoo.com'),
 ('0801-1969-01524', 'anardaleoni@yahoo.com'),
 ('0801-1969-07472', 'estram_alma@hotmail.com'),
 ('0801-1971-10812', 'ronysierra1972@gmail.com'),
 ('0801-1972-05103', 'wil.rubio@gmail.com'),
+('0801-1973-02463', 'carlosalberto73.medina@yahoo.com'),
 ('0801-1973-06908', 'gabycarranza73@yahoo.com'),
+('0801-1974-11622', 'camezase@yahoo.es'),
 ('0801-1975-08862', 'abreu79@yahoo.es'),
 ('0801-1975-22988', 'dcerrato@tecniseguros.com'),
 ('0801-1976-02179', 'acarolinasilva76@yahoo.com'),
@@ -3037,7 +7780,9 @@ INSERT INTO `sa_estudiantes_correos` (`dni_estudiante`, `correo`) VALUES
 ('0801-1977-08430', 'mayne7@yahoo.es'),
 ('0801-1977-12230', 'nd@yahoo.com'),
 ('0801-1977-12263', 'hildasilva20@yahoo.es'),
+('0801-1978-00051', 'aereyes@poderjudicial.gob.hn'),
 ('0801-1978-01136', 'cesardiaz35@yahoo.com'),
+('0801-1978-03326', 'nd@yahoo.com'),
 ('0801-1978-05079', 'gabrielatrejo22@yahoo.es'),
 ('0801-1978-11576', 'lessyh29@hotmail.com'),
 ('0801-1979-04263', 'isis_elvir@yahoo.com'),
@@ -3069,12 +7814,14 @@ INSERT INTO `sa_estudiantes_correos` (`dni_estudiante`, `correo`) VALUES
 ('0801-1987-14954', 'abogadomoralessilva@gmail.com'),
 ('0801-1987-21974', 'edues06@gmail.com'),
 ('0801-1988-10878', 'zdlupian10@yahoo.com'),
+('0801-1988-15506', 'anamejia_88@yahoo.es'),
 ('0801-1988-16527', 'albinlester@yahoo.com'),
 ('0801-1988-17857', 'tatum.sanchez20@gmail.com'),
 ('0801-1989-05245', 'lourdesdessiree@yahoo.com'),
 ('0801-1989-10181', 'alegomez0707@gmail.com'),
 ('0801-1989-13308', 'halhlight@gmail.com'),
 ('0801-1989-21350', 'anaribamercedes@yahoo.com'),
+('0801-1989-23436', 'andylagos_h10@hotmail.es'),
 ('0801-1990-01528', 'mayirodrig@hotmail.es'),
 ('0801-1990-01987', 'manuel_j2010@yahoo.com'),
 ('0801-1990-10397', 'joaquin_castrod2001@hotmail.com'),
@@ -3095,21 +7842,26 @@ INSERT INTO `sa_estudiantes_correos` (`dni_estudiante`, `correo`) VALUES
 ('0801-1991-05576', 'breysi.beltran@yahoo.com'),
 ('0801-1991-05729', 'jennybon03hn@yahoo.com'),
 ('0801-1991-06078', 'scrumats@gmail.com'),
+('0801-1991-09695', 'alvarenga_allan91@hotmail.com'),
 ('0801-1991-09840', 'allan21_hernandez@hotmail.com'),
 ('0801-1991-11506', 'ginarodriguez1991@yahoo.com'),
 ('0801-1991-11603', 'henrymen_612@hotmail.com'),
 ('0801-1991-11985', 'kiisazm@hotmail.com'),
 ('0801-1991-14156', 'elmeliberta_9119@hotmail.com'),
 ('0801-1991-15154', 'mlgr26@hotmail.com'),
+('0801-1991-18102', 'o.bessy@yahoo.com'),
 ('0801-1991-19007', 'rrestrada777@hotmail.com'),
 ('0801-1991-19039', 'johanarias93@yahoo.es'),
+('0801-1991-19110', 'nd@yahoo.com'),
 ('0801-1991-19754', 'diana_mfuentes@hotmail.com'),
 ('0801-1991-20572', 'leolezama_91@hotmail.com'),
 ('0801-1991-20952', 'ggaby_almendares@yahoo.es'),
+('0801-1991-20992', 'amyliz_1309@hotmail.com'),
 ('0801-1991-23837', 'monica_04@live.com'),
 ('0801-1991-24747', 'tobongabriela@gmail.com'),
 ('0801-1991-25625', 'mzepeda1555@hotmail.com'),
 ('0801-1992-00587', 'barinia.diaz@unah.hn'),
+('0801-1992-04969', 'asch.cruz@gmail.com'),
 ('0801-1992-06802', 'nadiamejia87@gmail.com'),
 ('0801-1992-15583', 'abogdiaz92@gmail.com'),
 ('0801-1992-16442', 'karolina1775@hotmail.com'),
@@ -3125,8 +7877,10 @@ INSERT INTO `sa_estudiantes_correos` (`dni_estudiante`, `correo`) VALUES
 ('0801-1993-02922', 'banyma_10@yahoo.es'),
 ('0801-1993-03083', 'gnicole_0092@hotmail.com'),
 ('0801-1993-03148', 'z.rudycarolina@yahoo.es'),
+('0801-1993-04902', 'allanartica@hotmail.com'),
 ('0801-1993-08892', 'ale_pin29@hotmail.com'),
 ('0801-1993-18899', 'pablo.oseguera@unah.hn'),
+('0801-1993-20450', 'ana-rubi1993@hotmail.com'),
 ('0801-1994-00660', 'daniel_alexander93@hotmail.es'),
 ('0801-1994-00789', 'graciela_fer17@hotmail.com'),
 ('0801-1994-01053', 'marcechinchilla_03@hotmail.com'),
@@ -3137,7 +7891,9 @@ INSERT INTO `sa_estudiantes_correos` (`dni_estudiante`, `correo`) VALUES
 ('0803-1960-00095', 'ysbaarch2011@yahoo.com'),
 ('0803-1992-00658', 'lili_raudales@yahoo.com'),
 ('0805-1985-00294', 'nd@yahoo.com'),
+('0806-1962-00063', 'bcastro3003@gmail.com'),
 ('0806-1968-00346', 'gonza126863@yahoo.com'),
+('0815-1990-00184', 'avilacarlos360@gmail.com'),
 ('0816-1990-00590', 'luis.baca@rocketmail.com'),
 ('0822-1975-00047', 'yecenia1649@gmail.com'),
 ('0822-1985-00305', 'dimasnoemoncadanavas@yahoo.com'),
@@ -3161,6 +7917,7 @@ INSERT INTO `sa_estudiantes_correos` (`dni_estudiante`, `correo`) VALUES
 ('1208-1992-00101', 'flor12dominguez@gmail.com'),
 ('1310-1990-00053', 'duniaxiomara@hotmail.com'),
 ('1312-1974-00146', 'nd@yahoo.com'),
+('1312-1989-00085', 'armandoaguirre98@yahoo.com'),
 ('1401-1984-01285', 'nd@yahoo.com'),
 ('1413-1992-00057', 'eli_chacon26@hotmail.com'),
 ('1501-1964-00486', 'patybustillo@yahoo.com'),
@@ -3186,6 +7943,7 @@ INSERT INTO `sa_estudiantes_correos` (`dni_estudiante`, `correo`) VALUES
 ('1519-1993-00016', 'bessysevilla504@yahoo.com'),
 ('1522-1993-00189', 'jhn_bardales@hotmail.com'),
 ('1601-1971-00224', 'nd@yahoo.com'),
+('1701-1990-00063', 'aiverson_i3@yahoo.com'),
 ('1701-1991-01282', 'silva.jesten@hotmail.com'),
 ('1701-1994-00415', 'nsarahibm11@gmail.com'),
 ('1701-1994-01266', 'rina_gl94@hotmail.com'),
@@ -3204,6 +7962,7 @@ INSERT INTO `sa_estudiantes_correos` (`dni_estudiante`, `correo`) VALUES
 -- Estructura de tabla para la tabla `sa_estudiantes_menciones_honorificas`
 --
 
+DROP TABLE IF EXISTS `sa_estudiantes_menciones_honorificas`;
 CREATE TABLE IF NOT EXISTS `sa_estudiantes_menciones_honorificas` (
   `dni_estudiante` varchar(20) NOT NULL,
   `cod_mencion` int(11) NOT NULL,
@@ -3223,10 +7982,13 @@ INSERT INTO `sa_estudiantes_menciones_honorificas` (`dni_estudiante`, `cod_menci
 ('0209-1985-02706', 5),
 ('0209-1988-00380', 1),
 ('0301-1990-00206', 1),
+('0301-1990-00485', 5),
 ('0301-1991-02655', 5),
 ('0301-1992-02168', 1),
 ('0301-1992-02454', 5),
 ('0306-1990-00442', 5),
+('0309-1990-00014', 5),
+('0311-1987-00215', 5),
 ('0313-1991-00244', 5),
 ('0313-1993-00221', 5),
 ('0318-1990-01175', 5),
@@ -3234,6 +7996,8 @@ INSERT INTO `sa_estudiantes_menciones_honorificas` (`dni_estudiante`, `cod_menci
 ('0501-1969-08032', 5),
 ('0501-1973-05537', 5),
 ('0501-1973-09295', 5),
+('0501-1974-07945', 5),
+('0501-1993-00152', 5),
 ('0601-1964-01002', 1),
 ('0601-1973-01687', 5),
 ('0601-1978-02416', 5),
@@ -3261,12 +8025,14 @@ INSERT INTO `sa_estudiantes_menciones_honorificas` (`dni_estudiante`, `cod_menci
 ('0704-1989-01096', 1),
 ('0705-1977-00029', 5),
 ('0715-1989-01068', 5),
+('0715-1991-00645', 5),
 ('0801-0000-00000', 5),
 ('0801-1903-33333', 5),
 ('0801-1954-03188', 5),
 ('0801-1956-00332', 5),
 ('0801-1958-03532', 5),
 ('0801-1958-07367', 5),
+('0801-1959-03814', 5),
 ('0801-1960-00244', 5),
 ('0801-1960-03413', 5),
 ('0801-1963-01704', 1),
@@ -3278,11 +8044,14 @@ INSERT INTO `sa_estudiantes_menciones_honorificas` (`dni_estudiante`, `cod_menci
 ('0801-1967-05937', 5),
 ('0801-1967-06317', 1),
 ('0801-1967-09794', 5),
+('0801-1968-01777', 5),
 ('0801-1969-01524', 5),
 ('0801-1969-07472', 5),
 ('0801-1971-10812', 5),
 ('0801-1972-05103', 1),
+('0801-1973-02463', 5),
 ('0801-1973-06908', 5),
+('0801-1974-11622', 5),
 ('0801-1975-08862', 5),
 ('0801-1975-22988', 5),
 ('0801-1976-02179', 5),
@@ -3294,7 +8063,9 @@ INSERT INTO `sa_estudiantes_menciones_honorificas` (`dni_estudiante`, `cod_menci
 ('0801-1977-08430', 1),
 ('0801-1977-12230', 5),
 ('0801-1977-12263', 5),
+('0801-1978-00051', 5),
 ('0801-1978-01136', 5),
+('0801-1978-03326', 5),
 ('0801-1978-05079', 5),
 ('0801-1978-11576', 5),
 ('0801-1979-04263', 5),
@@ -3326,12 +8097,14 @@ INSERT INTO `sa_estudiantes_menciones_honorificas` (`dni_estudiante`, `cod_menci
 ('0801-1987-14954', 5),
 ('0801-1987-21974', 1),
 ('0801-1988-10878', 5),
+('0801-1988-15506', 5),
 ('0801-1988-16527', 5),
 ('0801-1988-17857', 1),
 ('0801-1989-05245', 5),
 ('0801-1989-10181', 5),
 ('0801-1989-13308', 5),
 ('0801-1989-21350', 5),
+('0801-1989-23436', 5),
 ('0801-1990-01528', 5),
 ('0801-1990-01987', 5),
 ('0801-1990-10397', 5),
@@ -3352,21 +8125,26 @@ INSERT INTO `sa_estudiantes_menciones_honorificas` (`dni_estudiante`, `cod_menci
 ('0801-1991-05576', 5),
 ('0801-1991-05729', 1),
 ('0801-1991-06078', 5),
+('0801-1991-09695', 5),
 ('0801-1991-09840', 5),
 ('0801-1991-11506', 5),
 ('0801-1991-11603', 5),
 ('0801-1991-11985', 5),
 ('0801-1991-14156', 1),
 ('0801-1991-15154', 5),
+('0801-1991-18102', 5),
 ('0801-1991-19007', 1),
 ('0801-1991-19039', 5),
+('0801-1991-19110', 5),
 ('0801-1991-19754', 1),
 ('0801-1991-20572', 5),
 ('0801-1991-20952', 5),
+('0801-1991-20992', 5),
 ('0801-1991-23837', 5),
 ('0801-1991-24747', 1),
 ('0801-1991-25625', 5),
 ('0801-1992-00587', 5),
+('0801-1992-04969', 5),
 ('0801-1992-06802', 1),
 ('0801-1992-15583', 5),
 ('0801-1992-16442', 5),
@@ -3382,8 +8160,10 @@ INSERT INTO `sa_estudiantes_menciones_honorificas` (`dni_estudiante`, `cod_menci
 ('0801-1993-02922', 5),
 ('0801-1993-03083', 5),
 ('0801-1993-03148', 1),
+('0801-1993-04902', 5),
 ('0801-1993-08892', 5),
 ('0801-1993-18899', 5),
+('0801-1993-20450', 5),
 ('0801-1994-00660', 5),
 ('0801-1994-00789', 5),
 ('0801-1994-01053', 5),
@@ -3394,7 +8174,9 @@ INSERT INTO `sa_estudiantes_menciones_honorificas` (`dni_estudiante`, `cod_menci
 ('0803-1960-00095', 5),
 ('0803-1992-00658', 1),
 ('0805-1985-00294', 5),
+('0806-1962-00063', 5),
 ('0806-1968-00346', 5),
+('0815-1990-00184', 5),
 ('0816-1990-00590', 5),
 ('0822-1975-00047', 5),
 ('0822-1985-00305', 5),
@@ -3418,6 +8200,7 @@ INSERT INTO `sa_estudiantes_menciones_honorificas` (`dni_estudiante`, `cod_menci
 ('1208-1992-00101', 5),
 ('1310-1990-00053', 1),
 ('1312-1974-00146', 1),
+('1312-1989-00085', 5),
 ('1401-1984-01285', 5),
 ('1413-1992-00057', 5),
 ('1501-1964-00486', 5),
@@ -3443,6 +8226,7 @@ INSERT INTO `sa_estudiantes_menciones_honorificas` (`dni_estudiante`, `cod_menci
 ('1519-1993-00016', 1),
 ('1522-1993-00189', 5),
 ('1601-1971-00224', 5),
+('1701-1990-00063', 5),
 ('1701-1991-01282', 5),
 ('1701-1994-00415', 5),
 ('1701-1994-01266', 5),
@@ -3461,6 +8245,7 @@ INSERT INTO `sa_estudiantes_menciones_honorificas` (`dni_estudiante`, `cod_menci
 -- Estructura de tabla para la tabla `sa_estudiantes_tipos_estudiantes`
 --
 
+DROP TABLE IF EXISTS `sa_estudiantes_tipos_estudiantes`;
 CREATE TABLE IF NOT EXISTS `sa_estudiantes_tipos_estudiantes` (
   `codigo_tipo_estudiante` int(11) NOT NULL,
   `dni_estudiante` varchar(20) NOT NULL,
@@ -3711,7 +8496,32 @@ INSERT INTO `sa_estudiantes_tipos_estudiantes` (`codigo_tipo_estudiante`, `dni_e
 (1, '1503-1980-01992', '2016-01-19 08:55:29'),
 (2, '1312-1974-00146', '2016-01-23 15:08:09'),
 (1, '0801-1963-01704', '2016-01-23 15:20:26'),
-(1, '0801-1992-16442', '2016-01-23 15:31:53');
+(1, '0801-1992-16442', '2016-01-23 15:31:53'),
+(1, '0309-1990-00014', '2016-02-09 13:26:44'),
+(1, '0501-1993-00152', '2016-02-09 13:39:27'),
+(1, '0801-1959-03814', '2016-02-09 13:46:54'),
+(1, '0801-1991-19110', '2016-02-09 13:55:14'),
+(1, '0801-1993-04902', '2016-02-10 18:04:55'),
+(1, '0801-1991-09695', '2016-02-10 18:07:58'),
+(1, '0801-1992-04969', '2016-02-10 18:12:06'),
+(1, '0801-1968-01777', '2016-02-10 18:23:24'),
+(1, '0801-1991-20992', '2016-02-10 18:26:36'),
+(1, '0801-1978-00051', '2016-02-10 18:34:46'),
+(1, '0801-1988-15506', '2016-02-10 18:42:17'),
+(1, '0801-1993-20450', '2016-02-10 18:45:25'),
+(1, '0801-1989-23436', '2016-02-10 19:24:27'),
+(1, '0311-1987-00215', '2016-02-10 19:40:57'),
+(1, '1312-1989-00085', '2016-02-10 19:44:36'),
+(1, '1701-1990-00063', '2016-02-10 19:47:22'),
+(1, '0801-1991-18102', '2016-02-11 10:21:48'),
+(1, '0301-1990-00485', '2016-02-11 10:24:33'),
+(1, '0806-1962-00063', '2016-02-11 10:26:58'),
+(1, '0801-1978-03326', '2016-02-11 10:31:16'),
+(1, '0801-1974-11622', '2016-02-11 10:35:27'),
+(1, '0501-1974-07945', '2016-02-11 10:39:10'),
+(1, '0801-1973-02463', '2016-02-11 10:44:50'),
+(1, '0715-1991-00645', '2016-02-11 10:51:10'),
+(1, '0815-1990-00184', '2016-02-11 11:00:47');
 
 -- --------------------------------------------------------
 
@@ -3719,6 +8529,7 @@ INSERT INTO `sa_estudiantes_tipos_estudiantes` (`codigo_tipo_estudiante`, `dni_e
 -- Estructura de tabla para la tabla `sa_examenes_himno`
 --
 
+DROP TABLE IF EXISTS `sa_examenes_himno`;
 CREATE TABLE IF NOT EXISTS `sa_examenes_himno` (
   `cod_solicitud` int(11) NOT NULL,
   `fecha_solicitud` date NOT NULL,
@@ -3744,6 +8555,7 @@ INSERT INTO `sa_examenes_himno` (`cod_solicitud`, `fecha_solicitud`, `nota_himno
 -- Estructura de tabla para la tabla `sa_menciones_honorificas`
 --
 
+DROP TABLE IF EXISTS `sa_menciones_honorificas`;
 CREATE TABLE IF NOT EXISTS `sa_menciones_honorificas` (
   `codigo` int(11) NOT NULL auto_increment,
   `descripcion` varchar(50) default NULL,
@@ -3766,6 +8578,7 @@ INSERT INTO `sa_menciones_honorificas` (`codigo`, `descripcion`) VALUES
 -- Estructura de tabla para la tabla `sa_orientaciones`
 --
 
+DROP TABLE IF EXISTS `sa_orientaciones`;
 CREATE TABLE IF NOT EXISTS `sa_orientaciones` (
   `codigo` int(11) NOT NULL auto_increment,
   `descripcion` varchar(50) default NULL,
@@ -3790,6 +8603,7 @@ INSERT INTO `sa_orientaciones` (`codigo`, `descripcion`) VALUES
 -- Estructura de tabla para la tabla `sa_periodos`
 --
 
+DROP TABLE IF EXISTS `sa_periodos`;
 CREATE TABLE IF NOT EXISTS `sa_periodos` (
   `codigo` int(11) NOT NULL,
   `nombre` varchar(20) default NULL,
@@ -3812,6 +8626,7 @@ INSERT INTO `sa_periodos` (`codigo`, `nombre`) VALUES
 -- Estructura de tabla para la tabla `sa_planes_estudio`
 --
 
+DROP TABLE IF EXISTS `sa_planes_estudio`;
 CREATE TABLE IF NOT EXISTS `sa_planes_estudio` (
   `codigo` int(11) NOT NULL auto_increment,
   `nombre` varchar(50) default NULL,
@@ -3833,6 +8648,7 @@ INSERT INTO `sa_planes_estudio` (`codigo`, `nombre`, `uv`) VALUES
 -- Estructura de tabla para la tabla `sa_solicitudes`
 --
 
+DROP TABLE IF EXISTS `sa_solicitudes`;
 CREATE TABLE IF NOT EXISTS `sa_solicitudes` (
   `codigo` int(11) NOT NULL auto_increment,
   `fecha_solicitud` date NOT NULL,
@@ -3870,6 +8686,7 @@ INSERT INTO `sa_solicitudes` (`codigo`, `fecha_solicitud`, `observaciones`, `dni
 -- Estructura de tabla para la tabla `sa_tipos_estudiante`
 --
 
+DROP TABLE IF EXISTS `sa_tipos_estudiante`;
 CREATE TABLE IF NOT EXISTS `sa_tipos_estudiante` (
   `codigo` int(11) NOT NULL auto_increment,
   `descripcion` varchar(50) NOT NULL,
@@ -3890,6 +8707,7 @@ INSERT INTO `sa_tipos_estudiante` (`codigo`, `descripcion`) VALUES
 -- Estructura de tabla para la tabla `sa_tipos_solicitud`
 --
 
+DROP TABLE IF EXISTS `sa_tipos_solicitud`;
 CREATE TABLE IF NOT EXISTS `sa_tipos_solicitud` (
   `codigo` int(11) NOT NULL auto_increment,
   `nombre` varchar(50) default NULL,
@@ -3915,6 +8733,7 @@ INSERT INTO `sa_tipos_solicitud` (`codigo`, `nombre`) VALUES
 -- Estructura de tabla para la tabla `sa_tipos_solicitud_tipos_alumnos`
 --
 
+DROP TABLE IF EXISTS `sa_tipos_solicitud_tipos_alumnos`;
 CREATE TABLE IF NOT EXISTS `sa_tipos_solicitud_tipos_alumnos` (
   `cod_tipo_solicitud` int(11) NOT NULL,
   `cod_tipo_alumno` int(11) NOT NULL,
@@ -3942,6 +8761,7 @@ INSERT INTO `sa_tipos_solicitud_tipos_alumnos` (`cod_tipo_solicitud`, `cod_tipo_
 -- Estructura de tabla para la tabla `seguimiento`
 --
 
+DROP TABLE IF EXISTS `seguimiento`;
 CREATE TABLE IF NOT EXISTS `seguimiento` (
   `Id_Seguimiento` int(11) NOT NULL auto_increment,
   `NroFolio` varchar(25) NOT NULL,
@@ -3954,7 +8774,7 @@ CREATE TABLE IF NOT EXISTS `seguimiento` (
   PRIMARY KEY  (`Id_Seguimiento`),
   KEY `fk_seguimiento_folios_idx` (`NroFolio`),
   KEY `fk_seguimiento_usuarioAsignado_idx` (`UsuarioAsignado`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=47 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=49 ;
 
 --
 -- Volcar la base de datos para la tabla `seguimiento`
@@ -4006,7 +8826,9 @@ INSERT INTO `seguimiento` (`Id_Seguimiento`, `NroFolio`, `UsuarioAsignado`, `Not
 (43, '003-2016', NULL, 'SE LE DIO COPIA A LA COORDINADORA DE CARRERA', 2, '2016-01-11 13:08:05', NULL, 2),
 (44, 'Oficio No.088-2016', 2, 'NA', 1, '2016-01-18 14:45:37', NULL, 1),
 (45, 'Oficio No. VRA-089-2016', 2, 'na', 1, '2016-01-18 14:50:14', NULL, 1),
-(46, 'Circular VRA-No.001-2016', 2, 'na', 2, '2016-01-18 15:07:35', NULL, 1);
+(46, 'Circular VRA-No.001-2016', 2, 'na', 2, '2016-01-18 15:07:35', NULL, 1),
+(47, 'CCD-150-2016', 31, 'El día lunes se le remitirá a la Abg. Diana Valladares , para la firma del mismo.', 1, '2016-02-05 17:24:24', NULL, 1),
+(48, '0001', 7, 'PRUEBA', 2, '2016-02-11 18:40:19', '2016-02-11', 0);
 
 -- --------------------------------------------------------
 
@@ -4014,6 +8836,7 @@ INSERT INTO `seguimiento` (`Id_Seguimiento`, `NroFolio`, `UsuarioAsignado`, `Not
 -- Estructura de tabla para la tabla `seguimiento_historico`
 --
 
+DROP TABLE IF EXISTS `seguimiento_historico`;
 CREATE TABLE IF NOT EXISTS `seguimiento_historico` (
   `Id_SeguimientoHistorico` int(11) NOT NULL auto_increment,
   `Id_Seguimiento` int(11) NOT NULL,
@@ -4088,6 +8911,7 @@ INSERT INTO `seguimiento_historico` (`Id_SeguimientoHistorico`, `Id_Seguimiento`
 -- Estructura de tabla para la tabla `sub_actividad`
 --
 
+DROP TABLE IF EXISTS `sub_actividad`;
 CREATE TABLE IF NOT EXISTS `sub_actividad` (
   `id_sub_Actividad` int(11) NOT NULL auto_increment,
   `idActividad` int(11) NOT NULL,
@@ -4114,6 +8938,7 @@ CREATE TABLE IF NOT EXISTS `sub_actividad` (
 -- Estructura de tabla para la tabla `sub_actividades_realizadas`
 --
 
+DROP TABLE IF EXISTS `sub_actividades_realizadas`;
 CREATE TABLE IF NOT EXISTS `sub_actividades_realizadas` (
   `id_subActividadRealizada` int(11) NOT NULL auto_increment,
   `id_SubActividad` int(11) NOT NULL,
@@ -4135,6 +8960,7 @@ CREATE TABLE IF NOT EXISTS `sub_actividades_realizadas` (
 -- Estructura de tabla para la tabla `telefono`
 --
 
+DROP TABLE IF EXISTS `telefono`;
 CREATE TABLE IF NOT EXISTS `telefono` (
   `ID_Telefono` int(11) NOT NULL auto_increment,
   `Tipo` varchar(45) default NULL,
@@ -4142,7 +8968,7 @@ CREATE TABLE IF NOT EXISTS `telefono` (
   `N_identidad` varchar(20) NOT NULL,
   PRIMARY KEY  (`ID_Telefono`),
   KEY `fk_Telefono_Persona1_idx` (`N_identidad`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=239 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=264 ;
 
 --
 -- Volcar la base de datos para la tabla `telefono`
@@ -4386,28 +9212,32 @@ INSERT INTO `telefono` (`ID_Telefono`, `Tipo`, `Numero`, `N_identidad`) VALUES
 (235, NULL, '9704-2489', '1503-1980-01992'),
 (236, NULL, '9476-2952', '1312-1974-00146'),
 (237, NULL, '9459-8157', '0801-1963-01704'),
-(238, NULL, '9703-3726', '0801-1992-16442');
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `tipodepermiso`
---
-
-CREATE TABLE IF NOT EXISTS `tipodepermiso` (
-  `id_tipo_permiso` int(11) NOT NULL,
-  `tipo_permiso` varchar(90) NOT NULL
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1;
-
---
--- Volcar la base de datos para la tabla `tipodepermiso`
---
-
-INSERT INTO `tipodepermiso` (`id_tipo_permiso`, `tipo_permiso`) VALUES
-(1, 'Vacaciones'),
-(2, 'Tiempo compensatorio'),
-(3, 'Corriente'),
-(4, 'jhb');
+(238, NULL, '9703-3726', '0801-1992-16442'),
+(239, NULL, '9875-6938', '0309-1990-00014'),
+(240, NULL, '9611-6583', '0501-1993-00152'),
+(241, NULL, '9999-9999', '0801-1959-03814'),
+(242, NULL, '9999-9999', '0801-1991-19110'),
+(243, NULL, '9866-1992', '0801-1993-04902'),
+(244, NULL, '3301-9098', '0801-1991-09695'),
+(245, NULL, '9482-4145', '0801-1992-04969'),
+(246, NULL, '9534-1076', '0801-1968-01777'),
+(247, NULL, '9721-3255', '0801-1991-20992'),
+(248, NULL, '9661-2535', '0801-1978-00051'),
+(249, NULL, '9960-8287', '0801-1988-15506'),
+(250, NULL, '9925-3430', '0801-1993-20450'),
+(251, NULL, '9895-8786', '0801-1989-23436'),
+(252, NULL, '9513-5354', '0311-1987-00215'),
+(253, NULL, '9466-7054', '1312-1989-00085'),
+(254, NULL, '3307-9401', '1701-1990-00063'),
+(255, NULL, '9606-3171', '0801-1991-18102'),
+(256, NULL, '3216-8255', '0301-1990-00485'),
+(257, NULL, '9596-1864', '0806-1962-00063'),
+(258, NULL, '9777-4413', '0801-1978-03326'),
+(259, NULL, '9801-5443', '0801-1974-11622'),
+(260, NULL, '9557-1247', '0501-1974-07945'),
+(261, NULL, '3352-5540', '0801-1973-02463'),
+(262, NULL, '9457-1314', '0715-1991-00645'),
+(263, NULL, '3266-5624', '0815-1990-00184');
 
 -- --------------------------------------------------------
 
@@ -4415,6 +9245,7 @@ INSERT INTO `tipodepermiso` (`id_tipo_permiso`, `tipo_permiso`) VALUES
 -- Estructura de tabla para la tabla `tipo_area`
 --
 
+DROP TABLE IF EXISTS `tipo_area`;
 CREATE TABLE IF NOT EXISTS `tipo_area` (
   `id_Tipo_Area` int(11) NOT NULL auto_increment,
   `nombre` text NOT NULL,
@@ -4433,6 +9264,7 @@ CREATE TABLE IF NOT EXISTS `tipo_area` (
 -- Estructura de tabla para la tabla `tipo_estudio`
 --
 
+DROP TABLE IF EXISTS `tipo_estudio`;
 CREATE TABLE IF NOT EXISTS `tipo_estudio` (
   `ID_Tipo_estudio` int(11) NOT NULL auto_increment,
   `Tipo_estudio` varchar(45) NOT NULL,
@@ -4454,9 +9286,32 @@ INSERT INTO `tipo_estudio` (`ID_Tipo_estudio`, `Tipo_estudio`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `tipodepermiso`
+--
+
+DROP TABLE IF EXISTS `tipodepermiso`;
+CREATE TABLE IF NOT EXISTS `tipodepermiso` (
+  `id_tipo_permiso` int(11) NOT NULL,
+  `tipo_permiso` varchar(90) NOT NULL
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1;
+
+--
+-- Volcar la base de datos para la tabla `tipodepermiso`
+--
+
+INSERT INTO `tipodepermiso` (`id_tipo_permiso`, `tipo_permiso`) VALUES
+(1, 'Vacaciones'),
+(2, 'Tiempo compensatorio'),
+(3, 'Corriente'),
+(4, 'jhb');
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `titulo`
 --
 
+DROP TABLE IF EXISTS `titulo`;
 CREATE TABLE IF NOT EXISTS `titulo` (
   `id_titulo` int(11) NOT NULL auto_increment,
   `titulo` text NOT NULL,
@@ -4523,6 +9378,7 @@ INSERT INTO `titulo` (`id_titulo`, `titulo`) VALUES
 -- Estructura de tabla para la tabla `ubicacion_archivofisico`
 --
 
+DROP TABLE IF EXISTS `ubicacion_archivofisico`;
 CREATE TABLE IF NOT EXISTS `ubicacion_archivofisico` (
   `Id_UbicacionArchivoFisico` int(5) NOT NULL auto_increment,
   `DescripcionUbicacionFisica` text NOT NULL,
@@ -4555,6 +9411,7 @@ INSERT INTO `ubicacion_archivofisico` (`Id_UbicacionArchivoFisico`, `Descripcion
 -- Estructura de tabla para la tabla `ubicacion_notificaciones`
 --
 
+DROP TABLE IF EXISTS `ubicacion_notificaciones`;
 CREATE TABLE IF NOT EXISTS `ubicacion_notificaciones` (
   `Id_UbicacionNotificaciones` tinyint(4) NOT NULL auto_increment,
   `DescripcionUbicacionNotificaciones` text NOT NULL,
@@ -4572,6 +9429,7 @@ CREATE TABLE IF NOT EXISTS `ubicacion_notificaciones` (
 -- Estructura de tabla para la tabla `unidad_academica`
 --
 
+DROP TABLE IF EXISTS `unidad_academica`;
 CREATE TABLE IF NOT EXISTS `unidad_academica` (
   `Id_UnidadAcademica` int(11) NOT NULL auto_increment,
   `NombreUnidadAcademica` text NOT NULL,
@@ -4601,6 +9459,7 @@ INSERT INTO `unidad_academica` (`Id_UnidadAcademica`, `NombreUnidadAcademica`, `
 -- Estructura de tabla para la tabla `universidad`
 --
 
+DROP TABLE IF EXISTS `universidad`;
 CREATE TABLE IF NOT EXISTS `universidad` (
   `Id_universidad` int(11) NOT NULL auto_increment,
   `nombre_universidad` varchar(60) NOT NULL,
@@ -4637,6 +9496,7 @@ INSERT INTO `universidad` (`Id_universidad`, `nombre_universidad`, `Id_pais`) VA
 -- Estructura de tabla para la tabla `usuario`
 --
 
+DROP TABLE IF EXISTS `usuario`;
 CREATE TABLE IF NOT EXISTS `usuario` (
   `id_Usuario` int(11) NOT NULL auto_increment,
   `No_Empleado` varchar(13) NOT NULL,
@@ -4657,7 +9517,7 @@ CREATE TABLE IF NOT EXISTS `usuario` (
 --
 
 INSERT INTO `usuario` (`id_Usuario`, `No_Empleado`, `nombre`, `Password`, `Id_Rol`, `Fecha_Creacion`, `Fecha_Alta`, `Estado`, `esta_logueado`) VALUES
-(1, '2109', 'prueba', '81DF7D234F3B8F5487AF508C2C79B00A', 100, '2015-07-06', NULL, 1, 0),
+(1, '2109', 'prueba', '81DF7D234F3B8F5487AF508C2C79B00A', 100, '2015-07-06', NULL, 1, 1),
 (2, '6558', 'bessynazar', '35869D3215BBBBD3608F2184574ECD84', 50, '2015-11-16', NULL, 1, 0),
 (3, '11538', 'waltermelendez', 'B7862F75646F3B7EDAD49C2A5D38789E', 100, '2015-11-16', NULL, 1, 0),
 (4, '8708', 'anamoncada', '4E9F3DDDB50C81FEC3C6F7F9A0E6FAB3', 100, '2015-11-16', NULL, 1, 0),
@@ -4698,6 +9558,7 @@ INSERT INTO `usuario` (`id_Usuario`, `No_Empleado`, `nombre`, `Password`, `Id_Ro
 -- Estructura de tabla para la tabla `usuario_alertado`
 --
 
+DROP TABLE IF EXISTS `usuario_alertado`;
 CREATE TABLE IF NOT EXISTS `usuario_alertado` (
   `Id_UsuarioAlertado` int(11) NOT NULL auto_increment,
   `Id_Alerta` int(11) NOT NULL,
@@ -4718,13 +9579,14 @@ CREATE TABLE IF NOT EXISTS `usuario_alertado` (
 -- Estructura de tabla para la tabla `usuario_log`
 --
 
+DROP TABLE IF EXISTS `usuario_log`;
 CREATE TABLE IF NOT EXISTS `usuario_log` (
   `Id_log` int(11) NOT NULL auto_increment,
   `usuario` int(11) NOT NULL,
   `fecha_log` timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
   `ip_conn` varchar(45) default NULL,
   PRIMARY KEY  (`Id_log`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=496 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=542 ;
 
 --
 -- Volcar la base de datos para la tabla `usuario_log`
@@ -5225,7 +10087,53 @@ INSERT INTO `usuario_log` (`Id_log`, `usuario`, `fecha_log`, `ip_conn`) VALUES
 (492, 12, '2016-01-21 14:59:01', '10.10.13.206'),
 (493, 4, '2016-01-23 14:57:59', '190.181.201.172'),
 (494, 4, '2016-01-24 15:44:51', '190.181.201.172'),
-(495, 5, '2016-01-25 12:59:04', '10.10.12.139');
+(495, 5, '2016-01-25 12:59:04', '10.10.12.139'),
+(496, 1, '2016-01-27 17:03:01', '190.92.25.118'),
+(497, 1, '2016-01-27 21:25:39', '201.190.18.229'),
+(498, 1, '2016-01-30 12:26:41', '186.32.234.114'),
+(499, 1, '2016-02-02 13:55:10', '201.190.18.130'),
+(500, 1, '2016-02-02 14:05:09', '201.190.18.130'),
+(501, 4, '2016-02-04 14:47:41', '190.53.203.89'),
+(502, 11, '2016-02-04 18:32:23', '10.10.13.204'),
+(503, 4, '2016-02-04 18:43:46', '190.53.203.89'),
+(504, 7, '2016-02-05 17:19:07', '10.10.13.22'),
+(505, 12, '2016-02-08 09:11:58', '10.10.13.206'),
+(506, 12, '2016-02-08 09:42:56', '10.10.13.206'),
+(507, 1, '2016-02-08 10:09:45', '186.2.138.96'),
+(508, 12, '2016-02-08 10:32:11', '10.10.13.206'),
+(509, 1, '2016-02-08 10:40:02', '10.10.13.206'),
+(510, 4, '2016-02-09 13:11:33', '190.53.203.89'),
+(511, 1, '2016-02-09 19:17:15', '10.10.13.206'),
+(512, 4, '2016-02-10 18:00:08', '190.53.203.89'),
+(513, 4, '2016-02-10 19:19:56', '190.53.203.89'),
+(514, 4, '2016-02-11 10:02:07', '190.53.203.89'),
+(515, 12, '2016-02-11 14:26:48', '10.10.13.206'),
+(516, 12, '2016-02-11 15:11:58', '10.10.13.206'),
+(517, 1, '2016-02-11 16:10:39', '10.10.13.206'),
+(518, 12, '2016-02-11 16:51:04', '10.10.13.206'),
+(519, 3, '2016-02-11 17:11:01', '10.10.13.206'),
+(520, 2, '2016-02-11 17:11:55', '10.10.13.206'),
+(521, 12, '2016-02-11 17:12:37', '10.10.13.206'),
+(522, 2, '2016-02-11 17:13:09', '10.10.13.206'),
+(523, 12, '2016-02-11 17:25:11', '10.10.13.206'),
+(524, 2, '2016-02-11 17:28:57', '10.10.13.206'),
+(525, 12, '2016-02-11 17:29:28', '10.10.13.206'),
+(526, 3, '2016-02-11 17:31:36', '10.10.13.206'),
+(527, 12, '2016-02-11 17:32:47', '10.10.13.206'),
+(528, 12, '2016-02-11 17:53:34', '10.10.13.206'),
+(529, 3, '2016-02-11 17:57:28', '10.10.13.206'),
+(530, 12, '2016-02-11 17:58:36', '10.10.13.206'),
+(531, 3, '2016-02-11 17:58:51', '10.10.13.206'),
+(532, 12, '2016-02-11 18:04:17', '10.10.13.206'),
+(533, 2, '2016-02-11 18:05:16', '10.10.13.206'),
+(534, 12, '2016-02-11 18:19:54', '10.10.13.206'),
+(535, 12, '2016-02-12 16:42:47', '10.10.13.206'),
+(536, 1, '2016-02-14 12:49:16', '190.181.207.62'),
+(537, 1, '2016-02-14 13:02:15', '190.181.207.62'),
+(538, 1, '2016-02-14 13:06:02', '192.168.0.24'),
+(539, 1, '2016-02-14 13:07:19', '190.181.207.62'),
+(540, 1, '2016-02-14 13:36:43', '127.0.0.1'),
+(541, 1, '2016-02-14 13:48:13', '190.181.207.62');
 
 -- --------------------------------------------------------
 
@@ -5233,6 +10141,7 @@ INSERT INTO `usuario_log` (`Id_log`, `usuario`, `fecha_log`, `ip_conn`) VALUES
 -- Estructura de tabla para la tabla `usuario_notificado`
 --
 
+DROP TABLE IF EXISTS `usuario_notificado`;
 CREATE TABLE IF NOT EXISTS `usuario_notificado` (
   `Id_UsuarioNotificado` int(11) NOT NULL auto_increment,
   `Id_Notificacion` int(11) NOT NULL,

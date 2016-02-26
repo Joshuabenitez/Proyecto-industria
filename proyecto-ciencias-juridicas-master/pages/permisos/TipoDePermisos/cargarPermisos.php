@@ -3,7 +3,7 @@ $mkdir = "../../../";
 include($mkdir."conexion/config.inc.php");
 
     /* Hacemos una consulta a la base de datos para obtener los datos de la tabla Ciudades. */
-        $query = 'SELECT * FROM TipoDePermiso';
+        $query = "SELECT * FROM  `tipodepermiso`";
         $result = mysql_query($query);
         $json = array();
         $contadorIteracion = 0;

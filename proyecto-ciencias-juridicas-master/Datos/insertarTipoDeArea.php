@@ -1,12 +1,23 @@
 <?php
-include '../Datos/conexion.php';
+require_once("../conexion/config.inc.php");
 $nombre= $_POST['nombreDTA'];
 $obs= $_POST['observacionDTA'];
 
-$consulta=$conectar->prepare("CALL pa_insertar_tipo_area(?,?);");
-$consulta->bind_param('ss',$nombre,$obs);
-$resultado=$consulta->execute();
-
+try{
+        $stmt = $db->prepare("CALL pa_insertar_tipo_area(?,?,@mensaje,@codMensaje)");
+        $stmt->bindParam(1, $nombre, PDO::PARAM_STR); 
+        $stmt->bindParam(2, $obs, PDO::PARAM_STR); 
+        $stmt->execute();   
+        
+        $output = $db->query("select @mensaje, @codMensaje")->fetch(PDO::FETCH_ASSOC);
+        //var_dump($output);
+        $mensaje = $output['@mensaje'];
+        $resultado = $output['@codMensaje'];
+        
+        }catch(PDOExecption $e){
+            $mensaje="No se ha procesado su peticion, comuniquese con el administrador del sistema";
+            $codMensaje =0;
+        }
 if($resultado==1)
     {
     echo '<div id="resultado" class="alert alert-success">
@@ -16,7 +27,7 @@ if($resultado==1)
     
     }else{
          echo '<div id="resultado" class="alert alert-danger">
-        No se pudo almacenaar
+        No se pu'.$resultado.'do almacenar
          
          </div>';
     }

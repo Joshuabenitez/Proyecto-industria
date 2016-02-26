@@ -28,10 +28,6 @@ include "../../../Datos/conexion.php";
     require_once("../../../pages/recursos_humanos/cv/nuevo/personaAgregar.php");
     }
     
-     if($tipoProcedimiento == "insetarFoto"){
-    require_once("../../../pages/recursos_humanos/cv/subirFoto.php");
-    }
-    
     if($tipoProcedimiento == "ActualizarTel"){
     require_once("../../../pages/recursos_humanos/cv/actualizar/tAct.php");
     }
@@ -83,6 +79,8 @@ if (isset($_POST['identi'])) {
         $email = $row['Correo_electronico'];
         $estCivil = $row['Estado_Civil'];
         $nacionalidad = $row['Nacionalidad'];
+        $fotoDir = $row['foto_perfil'];
+        
 
         //Experiencia Académica
         $queryEA = mysql_query("SELECT experiencia_academica.ID_Experiencia_academica, Institucion, Tiempo,Clase FROM experiencia_academica inner join clases_has_experiencia_academica on clases_has_experiencia_academica.ID_Experiencia_academica=experiencia_academica.ID_Experiencia_academica inner join clases on clases.ID_Clases=clases_has_experiencia_academica.ID_Clases WHERE N_identidad='". $_POST['identi'] ."'");
@@ -117,7 +115,27 @@ if (isset($_POST['identi'])) {
         fn_Agregar();
         
         
-           
+         $("#formfotocv").submit(function(e) {
+            e.preventDefault();
+
+            var id = "<?php echo $id; ?>" ;
+            var formData = new FormData(document.getElementById("formfotocv"));
+            formData.append("identi", id);
+            $.ajax({
+                url: "pages/recursos_humanos/cv/SubirImagen.php",
+                type: "post",
+                dataType: "html",
+                data: formData,
+                cache: false,
+                contentType: false,
+                processData: false
+            })
+                .done(function(res){
+                    $("#foto").html(res);
+                    $("#SubirFoto").modal("hide");
+                });
+    
+         });
 
 
         
@@ -263,25 +281,7 @@ if (isset($_POST['identi'])) {
      
      
        $(".guardarFoto").click(function() {
-           
-           alert("hola");
-                  var identi = "<?php echo $id; ?>" ;
-                  
-                  
-           
-            data = { identi:identi};
-            $.ajax({
-                async: true,
-                        type: "POST",
-                        dataType: "html",
-                        contentType: "application/x-www-form-urlencoded",
-                        //url: "Datos/eliminarUniversidad.php",
-                       // beforeSend: inicioEnvio,
-                        success:FotoAgregar ,
-                        timeout: 4000,
-                        error: problemas
-            });
-            return false;
+           $("#SubirFoto").modal("show");
         });
          
        $("#formTEL").submit(function(e) {
@@ -593,15 +593,6 @@ if (isset($_POST['identi'])) {
         x.html('Cargando...');
     }
     
-      function FotoAgregar()
-        {
-            
-            $("#cuerpoFoto").load('pages/recursos_humanos/cv/Fotos_perfil/subirFoto.php', data);
-            $('#SubirFoto').modal('show');
-            $('#SubirFoto').on('hidden.bs.modal', function () {
-                $("#container").load('pages/recursos_humanos/cv/actualizar/formAcademica.php');
-            })
-        }
     
     
           function IdiomaAgregar()
@@ -818,12 +809,21 @@ if (isset($_POST['identi'])) {
                             	
                            
                                 <div class="panel-image thumbnail" id="foto">
-                                    <img src="pages/recursos_humanos/cv/icono-perfil-azul.png"   alt="Responsive image"  class=img-rounded" />
+                                    <img src= <?php 
+                                                $nombreFichero = 'Fotos_perfil/Fotografias/'.$fotoDir;
+                                                if($fotoDir==''){
+                                                    echo '"pages/recursos_humanos/cv/Fotos_perfil/fotoPorDefecto.png"';
+                                                }elseif(file_exists($nombreFichero)){
+                                                    echo '"pages/recursos_humanos/cv/'.$nombreFichero.'"'; 
+                                                }else{
+                                                    echo '"pages/recursos_humanos/cv/Fotos_perfil/fotoPorDefecto.png"';
+                                                }
+                                              ?>   alt="Responsive image"  class="img-rounded" />
                                 </div>
                                 
             
                                  <button id="tomarFoto" type="submit" class="btn btn-warning btn-block" data-toggle="modal" data-target="#fotografia" style="float: right;"><span class="glyphicon glyphicon-camera" aria-hidden="true"></span> Tomar foto</button>
-                                 <button id="guardarFoto" type="submit" class="guardarFoto btn btn-success btn-block" data-toggle="modal" data-target="#subirFoto" >Guardar foto</button>
+                                 <button id="guardarFoto" type="submit" class="guardarFoto btn btn-success btn-block" data-toggle="modal" data-target="#subirFoto" >Subir foto</button>
 
                         </div>
                         </div>
@@ -1342,18 +1342,24 @@ HTML;
     
     
     
-        <div class="modal fade" id="SubirFoto" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal fade" id="SubirFoto" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 <h4 class="modal-title" id="myModalLabel">subir foto</h4>
             </div>
-            <div class="modal-body" id="cuerpoFoto"></div>
+            <div class="modal-body">
+                <form id="formfotocv" enctype="multipart/form-data">
+                    Seleccione la foto:
+                    <input id="userImage"  name="userImage" class="form-control"  type="file" accept="image/*">
+                    <button type="button"  class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="TelB btn btn-primary" id="telefono">Guardar Foto</button>
+                </form>
+            </div>
         </div>
     </div>
-</div>   
-    
+</div> 
     
     
  
